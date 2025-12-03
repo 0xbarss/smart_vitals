@@ -10,6 +10,8 @@ abstract class AuthRemoteDataSource {
 
   Future<void> register(String email, String password, String name);
 
+  Future<void> updateUserData(String uid, String name, String email);
+
   Future<void> logout();
 }
 
@@ -71,6 +73,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } catch (e) {
       throw Exception('Registration Failed: $e');
     }
+  }
+
+  @override
+  Future<void> updateUserData(String uid, String name, String email) async {
+    await _firestore.collection('users').doc(uid).update({
+      'name': name,
+      'email': email,
+    });
+
+    await _firebaseAuth.currentUser?.verifyBeforeUpdateEmail(email);
   }
 
   @override

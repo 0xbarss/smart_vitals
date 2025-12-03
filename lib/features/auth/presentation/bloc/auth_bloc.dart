@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
+
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -11,6 +13,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
+    on<AuthUpdateProfile>(_onUpdateProfile);
     on<AuthLogoutRequested>(_onLogoutRequested);
   }
 
@@ -55,6 +58,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
     } catch (e) {
       emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateProfile(
+      AuthUpdateProfile event,
+      Emitter<AuthState> emit,
+      ) async {
+    final currentState = state;
+    if (currentState is Authenticated) {
+      try {
+        emit(AuthLoading());
+
+        await authRepository.updateUser(currentState.user.id, event.name, event.email);
+
+        final updatedUser = UserEntity(
+          id: currentState.user.id,
+          email: event.email,
+          name: event.name,
+        );
+
+        emit(Authenticated(updatedUser));
+      } catch (e) {
+        emit(AuthError("Failed to update profile: $e"));
+        emit(Authenticated(currentState.user));
+      }
     }
   }
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../../../config/routes/route_names.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -28,7 +27,14 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  void _onRegisterPressed() {
+  void _onContinuePressed() {
+    if (_nameController.text.isEmpty ||
+        _emailController.text.isEmpty ||
+        _passwordController.text.isEmpty) {
+      return;
+    }
+
+    // Trigger Firebase Registration
     context.read<AuthBloc>().add(
       AuthRegisterRequested(
         email: _emailController.text.trim(),
@@ -41,51 +47,48 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: const Color(0xFFF9FAFB), // bg-gray-50
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is Authenticated) {
-            context.goNamed(RouteNames.home);
+            // SUCCESS: Navigate to Step 2 (Health Details)
+            context.goNamed(RouteNames.healthDetails);
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
+              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
             );
           }
         },
         builder: (context, state) {
-          if (state is AuthLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          final isLoading = state is AuthLoading;
 
           return SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0), // p-6
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  IconButton(
-                    onPressed: () => context.pop(),
-                    icon: const Icon(Icons.arrow_back),
+                  // Back Chevron
+                  GestureDetector(
+                    onTap: () => context.goNamed(RouteNames.welcome),
+                    child: const Icon(Icons.chevron_left, size: 32, color: Color(0xFF4B5563)),
                   ),
-                  const SizedBox(height: 20),
+
+                  const SizedBox(height: 16),
+
+                  // Title
                   const Text(
                     "Create Account",
                     style: TextStyle(
-                      fontSize: 32,
+                      fontSize: 30, // text-3xl
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF1F2937),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "Start your health journey today",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 40),
 
+                  const SizedBox(height: 32),
+
+                  // Inputs
                   AuthField(
                     controller: _nameController,
                     hintText: "Full Name",
@@ -99,30 +102,31 @@ class _RegisterPageState extends State<RegisterPage> {
                   AuthField(
                     controller: _passwordController,
                     hintText: "Password",
-                    icon: Icons.lock_outline,
                     isPassword: true,
+                    icon: Icons.lock_outline,
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
+                  // Continue Button
                   SizedBox(
                     width: double.infinity,
+                    height: 56,
                     child: ElevatedButton(
-                      onPressed: _onRegisterPressed,
+                      onPressed: isLoading ? null : _onContinuePressed,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: const Color(0xFF2563EB), // bg-blue-600
+                        foregroundColor: Colors.white,
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: const Text(
+                      child: isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
                         "Continue",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),

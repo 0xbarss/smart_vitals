@@ -15,4 +15,10 @@ class AuthRegisterRequested extends AuthEvent {
   AuthRegisterRequested({required this.email, required this.password, required this.name});
 }
 
+class AuthUpdateProfile extends AuthEvent {
+  final String name;
+  final String email;
+  AuthUpdateProfile({required this.name, required this.email});
+}
+
 class AuthLogoutRequested extends AuthEvent {}
