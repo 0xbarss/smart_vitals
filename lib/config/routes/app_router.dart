@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/widgets/custom_drawer.dart';
 import '../../features/analysis/presentation/pages/analysis_page.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_state.dart';
+import '../../features/auth/presentation/pages/health_details_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
@@ -13,6 +16,8 @@ import '../../features/health_dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/health_dashboard/presentation/pages/metric_detail_page.dart';
 import '../../features/recipes/presentation/pages/recipes_page.dart';
 import '../../features/reports/presentation/pages/reports_page.dart';
+import '../../features/settings/presentation/bloc/settings_bloc.dart';
+import '../../features/settings/presentation/bloc/settings_state.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../injection_container.dart';
 import 'route_names.dart';
@@ -41,44 +46,29 @@ class AppRouter {
       final bool isSplash = location == RoutePaths.splash;
       final bool isWelcome = location == RoutePaths.welcome;
 
-      // ---------------------------------------------------------
-      // 1. HANDLING LOADING
-      // ---------------------------------------------------------
-      // If we are just starting up (Initial) or actively Loading,
-      // stay on the Splash screen to prevent flashing.
       if (authState is AuthInitial || authState is AuthLoading) {
         return null;
       }
 
       final bool isLoggedIn = authState is Authenticated;
 
-      // ---------------------------------------------------------
-      // 2. UNAUTHENTICATED USERS
-      // ---------------------------------------------------------
       if (!isLoggedIn) {
         if (isSplash) {
           return RoutePaths.welcome;
         }
 
-        // If strictly on Login/Register/Welcome, let them stay there.
         if (isLoggingIn || isWelcome) {
           return null;
         }
 
-        // If they try to access a protected route (like /home), kick them to Login.
         return RoutePaths.login;
       }
 
-      // ---------------------------------------------------------
-      // 3. AUTHENTICATED USERS
-      // ---------------------------------------------------------
       if (isLoggedIn) {
-        // If they are on an Auth screen (Splash/Login/Welcome), send them Home.
         if (isLoggingIn || isSplash || isWelcome) {
           return RoutePaths.home;
         }
 
-        // Otherwise, let them proceed (e.g., to /recipes).
         return null;
       }
 
@@ -106,8 +96,12 @@ class AppRouter {
         name: RouteNames.register,
         builder: (context, state) => const RegisterPage(),
       ),
+      GoRoute(
+        path: RoutePaths.healthDetails,
+        name: RouteNames.healthDetails,
+        builder: (context, state) => const HealthDetailsPage(),
+      ),
 
-      // --- SHELL ROUTE ---
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) {
@@ -181,38 +175,101 @@ class MainWrapperPage extends StatelessWidget {
       final String location = GoRouterState.of(context).uri.toString();
       if (location.startsWith(RoutePaths.analysis)) return 1;
       if (location.startsWith(RoutePaths.recipes)) return 2;
+      if (location.startsWith(RoutePaths.reports)) return 3;
+      if (location.startsWith(RoutePaths.settings)) return 4;
       return 0;
     }
 
-    return Scaffold(
-      body: child,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: getCurrentIndex(),
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              context.goNamed(RouteNames.home);
-              break;
-            case 1:
-              context.goNamed(RouteNames.analysis);
-              break;
-            case 2:
-              context.goNamed(RouteNames.recipes);
-              break;
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.analytics),
-            label: 'Analysis',
+    return BlocBuilder<SettingsBloc, SettingsState>(
+      builder: (context, settings) {
+        final bool isHighContrast = settings.highContrast;
+
+        final Color bgColor = isHighContrast ? Colors.black : Colors.white;
+        final Color selectedColor = isHighContrast
+            ? Colors.yellowAccent
+            : const Color(0xFF2563EB);
+        final Color unselectedColor = isHighContrast
+            ? Colors.white
+            : Colors.grey.shade400;
+        final Color borderColor = isHighContrast
+            ? Colors.white
+            : Colors.grey.shade200;
+
+        return Scaffold(
+          drawer: const AppDrawer(),
+          body: child,
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              color: bgColor,
+              border: Border(
+                top: BorderSide(
+                  color: borderColor,
+                  width: isHighContrast ? 2 : 1,
+                ),
+              ),
+            ),
+            child: BottomNavigationBar(
+              currentIndex: getCurrentIndex(),
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: bgColor,
+              selectedItemColor: selectedColor,
+              unselectedItemColor: unselectedColor,
+
+              selectedLabelStyle: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+              unselectedLabelStyle: const TextStyle(fontSize: 10),
+              elevation: 0,
+
+              onTap: (index) {
+                switch (index) {
+                  case 0:
+                    context.goNamed(RouteNames.home);
+                    break;
+                  case 1:
+                    context.goNamed(RouteNames.analysis);
+                    break;
+                  case 2:
+                    context.goNamed(RouteNames.recipes);
+                    break;
+                  case 3:
+                    context.goNamed(RouteNames.reports);
+                    break;
+                  case 4:
+                    context.goNamed(RouteNames.settings);
+                    break;
+                }
+              },
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_outlined),
+                  activeIcon: Icon(Icons.home),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.show_chart),
+                  label: 'Analysis',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.restaurant_menu),
+                  label: 'Recipes',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.description_outlined),
+                  activeIcon: Icon(Icons.description),
+                  label: 'Reports',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.settings_outlined),
+                  activeIcon: Icon(Icons.settings),
+                  label: 'Settings',
+                ),
+              ],
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.restaurant),
-            label: 'Recipes',
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

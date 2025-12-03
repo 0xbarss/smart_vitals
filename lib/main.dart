@@ -6,6 +6,8 @@ import 'config/routes/app_router.dart';
 import 'config/theme/app_theme.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_event.dart';
+import 'features/settings/presentation/bloc/settings_bloc.dart';
+import 'features/settings/presentation/bloc/settings_state.dart';
 import 'firebase_options.dart';
 import 'injection_container.dart' as di;
 
@@ -29,13 +31,32 @@ class SmartVitalsApp extends StatelessWidget {
         BlocProvider<AuthBloc>(
           create: (_) => di.sl<AuthBloc>(),
         ),
+        BlocProvider<SettingsBloc>(
+          create: (_) => di.sl<SettingsBloc>(),
+        ),
       ],
-      child: MaterialApp.router(
-        title: 'SmartVitals',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.getLightScene(),
-        darkTheme: AppTheme.getHighContrastTheme(),
-        routerConfig: AppRouter.router,
+      child: BlocBuilder<SettingsBloc, SettingsState>(
+        builder: (context, settingsState) {
+          return MaterialApp.router(
+            title: 'SmartVitals',
+            debugShowCheckedModeBanner: false,
+
+            theme: settingsState.highContrast
+                ? AppTheme.getHighContrastTheme(fontSizeScale: 1.0)
+                : AppTheme.getLightScene(fontSizeScale: 1.0),
+
+            routerConfig: AppRouter.router,
+
+            builder: (context, child) {
+              return MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: TextScaler.linear(settingsState.fontSizeLevel),
+                ),
+                child: child!,
+              );
+            },
+          );
+        },
       ),
     );
   }
