@@ -10,7 +10,7 @@ abstract class AuthRemoteDataSource {
 
   Future<void> register(String email, String password, String name);
 
-  Future<void> updateUserData(String uid, String name, String email);
+  Future<void> updateUserData(String uid, String name, String email, String emergencyEmail, String emergencyPhone);
 
   Future<void> logout();
 }
@@ -29,7 +29,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Stream<UserModel?> get authStateChanges {
     return _firebaseAuth.authStateChanges().asyncMap((user) async {
       if (user == null) return null;
-      return UserModel(id: user.uid, email: user.email ?? '');
+
+      final doc = await _firestore.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        return UserModel.fromMap(doc.data()!);
+      }
+
+      return UserModel(id: user.uid, email: user.email ?? '', name: user.displayName);
     });
   }
 
@@ -76,13 +82,17 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<void> updateUserData(String uid, String name, String email) async {
+  Future<void> updateUserData(String uid, String name, String email, String emergencyEmail, String emergencyPhone) async {
+    final user = _firebaseAuth.currentUser;
+    if (user != null) {
+      await user.updateDisplayName(name);
+    }
     await _firestore.collection('users').doc(uid).update({
       'name': name,
       'email': email,
+      'emergencyEmail': emergencyEmail,
+      'emergencyPhone': emergencyPhone,
     });
-
-    await _firebaseAuth.currentUser?.verifyBeforeUpdateEmail(email);
   }
 
   @override

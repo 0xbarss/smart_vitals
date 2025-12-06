@@ -42,6 +42,8 @@ dependencies:
   firebase_core: ^4.2.1
   flutter_bloc: ^9.1.1
   get_it: ^9.1.1
+  flutter_ringtone_player: ^4.0.0+4
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

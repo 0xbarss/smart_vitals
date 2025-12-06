@@ -24,8 +24,8 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> updateUser(String uid, String name, String email) async {
-    await remoteDataSource.updateUserData(uid, name, email);
+  Future<void> updateUser(String uid, String name, String email, String emergencyEmail, String emergencyPhone) async {
+    await remoteDataSource.updateUserData(uid, name, email, emergencyEmail, emergencyPhone);
   }
 
   @override

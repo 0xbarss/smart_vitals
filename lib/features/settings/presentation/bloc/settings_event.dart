@@ -1,3 +1,5 @@
+import 'settings_state.dart';
+
 abstract class SettingsEvent {}
 
 class ToggleHighContrast extends SettingsEvent {
@@ -13,4 +15,9 @@ class SetFontSize extends SettingsEvent {
 class ToggleReduceMotion extends SettingsEvent {
   final bool isEnabled;
   ToggleReduceMotion(this.isEnabled);
+}
+
+class ChangeAppMode extends SettingsEvent {
+  final AppMode mode;
+  ChangeAppMode(this.mode);
 }

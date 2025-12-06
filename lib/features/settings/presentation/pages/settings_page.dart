@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,7 +23,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
   late TextEditingController _nameController;
   late TextEditingController _emailController;
-  final TextEditingController _passwordController = TextEditingController();
+  late TextEditingController _emEmailController;
+  late TextEditingController _emPhoneController;
 
   bool _isSavingProfile = false;
 
@@ -60,13 +62,20 @@ class _SettingsPageState extends State<SettingsPage> {
 
     _nameController = TextEditingController(text: initialName);
     _emailController = TextEditingController(text: initialEmail);
+    _emEmailController = TextEditingController(
+      text: authState is Authenticated ? authState.user.emergencyEmail : "",
+    );
+    _emPhoneController = TextEditingController(
+      text: authState is Authenticated ? authState.user.emergencyPhone : "",
+    );
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _passwordController.dispose();
+    _emEmailController.dispose();
+    _emPhoneController.dispose();
     super.dispose();
   }
 
@@ -79,12 +88,36 @@ class _SettingsPageState extends State<SettingsPage> {
   void _updateProfile() {
     if (_nameController.text.isEmpty) return;
 
+    if (_emEmailController.text.isNotEmpty &&
+        !_emEmailController.text.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Invalid Emergency Email"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    String phone = _emPhoneController.text.trim();
+    if (phone.isNotEmpty && phone.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter a valid phone number"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSavingProfile = true);
 
     context.read<AuthBloc>().add(
       AuthUpdateProfile(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
+        emergencyEmail: _emEmailController.text.trim(),
+        emergencyPhone: _emPhoneController.text.trim(),
       ),
     );
   }
@@ -180,12 +213,27 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                             const SizedBox(height: 12),
                             _buildProfileField(
-                              "Password",
-                              Icons.lock_outline,
-                              _passwordController,
+                              "Emergency Email",
+                              Icons.email,
+                              _emEmailController,
                               isHighContrast,
-                              isPassword: true,
-                              hint: "Change Password",
+                              hint: "contact@example.com",
+                              keyboardType: TextInputType.emailAddress,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildProfileField(
+                              "Emergency Phone",
+                              Icons.phone_in_talk,
+                              _emPhoneController,
+                              isHighContrast,
+                              hint: "+90 555...",
+                              keyboardType: TextInputType.phone,
+                              formatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'[0-9+\s-]'),
+                                ),
+                                LengthLimitingTextInputFormatter(20),
+                              ],
                             ),
                             const SizedBox(height: 16),
 
@@ -549,6 +597,8 @@ class _SettingsPageState extends State<SettingsPage> {
     bool isHighContrast, {
     bool isPassword = false,
     String? hint,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? formatters,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,6 +616,8 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           child: TextField(
             controller: ctrl,
+            keyboardType: keyboardType,
+            inputFormatters: formatters,
             obscureText: isPassword,
             decoration: InputDecoration(
               icon: Icon(

@@ -15,5 +15,9 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<ToggleReduceMotion>((event, emit) {
       emit(state.copyWith(reduceMotion: event.isEnabled));
     });
+
+    on<ChangeAppMode>((event, emit) {
+      emit(state.copyWith(appMode: event.mode));
+    });
   }
 }
