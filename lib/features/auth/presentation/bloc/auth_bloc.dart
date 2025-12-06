@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/entities/user_entity.dart';
@@ -70,17 +71,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       try {
         emit(AuthLoading());
 
-        await authRepository.updateUser(currentState.user.id, event.name, event.email);
+        await authRepository.updateUser(
+            currentState.user.id,
+            event.name,
+            event.email,
+            event.emergencyEmail,
+            event.emergencyPhone,
+        );
+
+        await FirebaseAuth.instance.currentUser?.reload();
 
         final updatedUser = UserEntity(
           id: currentState.user.id,
           email: event.email,
           name: event.name,
+          emergencyEmail: event.emergencyEmail,
+          emergencyPhone: event.emergencyPhone,
         );
 
         emit(Authenticated(updatedUser));
       } catch (e) {
-        emit(AuthError("Failed to update profile: $e"));
+        emit(AuthError("Failed to update: $e"));
         emit(Authenticated(currentState.user));
       }
     }
