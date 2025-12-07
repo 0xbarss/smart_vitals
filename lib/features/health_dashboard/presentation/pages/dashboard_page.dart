@@ -1,15 +1,19 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 
+import '../../../../injection_container.dart' as di;
 import '../../../../config/routes/route_names.dart';
+import '../../../../core/services/step_counter_service.dart';
 import '../../../../features/settings/presentation/bloc/settings_bloc.dart';
 import '../../../../features/settings/presentation/bloc/settings_state.dart';
+import '../../../settings/presentation/bloc/settings_event.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
-import '../../../settings/presentation/bloc/settings_event.dart';
+import '../../data/repositories/health_repository_impl.dart';
 import '../widgets/vital_card.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -21,6 +25,75 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   bool isSensorConnected = false;
+  String stepCount = "0";
+  late StepCounterService _stepService;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _stepService = di.sl<StepCounterService>();
+
+    _loadStepsFromFirestore();
+
+    _initSteps();
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 5),
+      (timer) => _fetchSteps(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initSteps() async {
+    bool permitted = await _stepService.requestPermissions();
+    if (permitted) {
+      await _fetchSteps();
+    }
+  }
+
+  Future<void> _loadStepsFromFirestore() async {
+    try {
+      final healthRepo = di.sl<HealthRepository>();
+
+      int savedSteps = await healthRepo.getDailySteps(DateTime.now());
+
+      if (savedSteps > 0 && mounted) {
+        debugPrint("Loaded cached steps: $savedSteps");
+        setState(() {
+          stepCount = savedSteps.toString();
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading cached steps: $e");
+    }
+  }
+
+  Future<void> _fetchSteps() async {
+    int liveSteps = await _stepService.getTodaySteps();
+
+    int currentUiSteps = int.tryParse(stepCount.replaceAll(',', '')) ?? 0;
+
+    if (liveSteps > currentUiSteps) {
+      if (mounted) {
+        setState(() {
+          stepCount = liveSteps.toString();
+        });
+        _saveStepsToCloud(liveSteps);
+      }
+    }
+  }
+
+  Future<void> _saveStepsToCloud(int steps) async {
+    final healthRepo = di.sl<HealthRepository>();
+    await healthRepo.saveDailySteps(steps);
+  }
 
   void _toggleSensor() {
     setState(() => isSensorConnected = true);
@@ -655,7 +728,7 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         VitalCard(
           title: "Step Count",
-          value: "8,547",
+          value: stepCount,
           unit: "steps",
           icon: Icons.directions_walk,
           iconBgColor: Colors.green,
