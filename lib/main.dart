@@ -38,7 +38,7 @@ class SmartVitalsApp extends StatelessWidget {
       child: BlocBuilder<SettingsBloc, SettingsState>(
         builder: (context, settingsState) {
           return MaterialApp.router(
-            title: 'SmartVitals',
+            title: 'Smart Vitals',
             debugShowCheckedModeBanner: false,
 
             theme: settingsState.highContrast
