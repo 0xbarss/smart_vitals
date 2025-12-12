@@ -30,8 +30,8 @@ class RoutePaths {
   static const String recipes = '/recipes';
   static const String reports = '/reports';
   static const String settings = '/settings';
+  static const String recipeDetail = '/recipe-detail';
 
   // Sub-routes
-  static const String recipeDetail = 'detail'; // relative path
   static const String metricDetail = 'metric-detail'; // relative path
 }
