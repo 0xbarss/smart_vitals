@@ -10,6 +10,7 @@ import '../../../../config/routes/route_names.dart';
 import '../../../../core/services/step_counter_service.dart';
 import '../../../../features/settings/presentation/bloc/settings_bloc.dart';
 import '../../../../features/settings/presentation/bloc/settings_state.dart';
+import '../../../chatbot/presentation/pages/chat_page.dart';
 import '../../../settings/presentation/bloc/settings_event.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
@@ -375,6 +376,15 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
             ],
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ChatPage()),
+              );
+            },
+            backgroundColor: const Color(0xFF2563EB),
+            child: const Icon(Icons.chat_bubble_outline, color: Colors.white),
           ),
         );
       },
