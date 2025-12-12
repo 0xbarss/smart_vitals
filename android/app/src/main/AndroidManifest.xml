@@ -4,6 +4,7 @@
         tools:ignore="HealthConnectPolicy" />
     <uses-permission android:name="android.permission.health.WRITE_STEPS"/>
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="Smart Vitals"
         android:name="${applicationName}"

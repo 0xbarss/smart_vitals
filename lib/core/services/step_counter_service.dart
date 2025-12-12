@@ -8,16 +8,23 @@ import 'package:sensors_plus/sensors_plus.dart';
 abstract class StepCounterService {
   Future<int> getTodaySteps();
   Future<bool> requestPermissions();
+  void setSavedSteps(int steps);
 }
 
 class StepCounterServiceImpl implements StepCounterService {
   final Health _health = Health();
 
-  bool _useHealthApi = false;
-  int _fallbackSteps = 0;
+  int _savedStepsOffset = 0;
+  int _sessionSteps = 0;
 
+  bool _useHealthApi = false;
   final double _threshold = 7;
   int _lastStepTime = 0;
+
+  @override
+  void setSavedSteps(int steps) {
+    _savedStepsOffset = steps;
+  }
 
   @override
   Future<bool> requestPermissions() async {
@@ -54,13 +61,14 @@ class StepCounterServiceImpl implements StepCounterService {
         final now = DateTime.now();
         final midnight = DateTime(now.year, now.month, now.day);
         int? steps = await _health.getTotalStepsInInterval(midnight, now);
-        return steps ?? 0;
+        int healthSteps = steps ?? 0;
+        return healthSteps > _savedStepsOffset ? healthSteps : _savedStepsOffset;
       } catch (e) {
-        return 0;
+        return _savedStepsOffset;
       }
     }
 
-    return _fallbackSteps;
+    return _savedStepsOffset + _sessionSteps;
   }
 
   void _initSensorFallback() async {
@@ -79,7 +87,7 @@ class StepCounterServiceImpl implements StepCounterService {
     int now = DateTime.now().millisecondsSinceEpoch;
 
     if (magnitude > _threshold && (now - _lastStepTime) > 500) {
-      _fallbackSteps++;
+      _sessionSteps++;
       _lastStepTime = now;
     }
   }

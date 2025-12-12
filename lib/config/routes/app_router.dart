@@ -14,6 +14,8 @@ import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/welcome_page.dart';
 import '../../features/health_dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/health_dashboard/presentation/pages/metric_detail_page.dart';
+import '../../features/recipes/domain/entities/recipe.dart';
+import '../../features/recipes/presentation/pages/recipe_detail_page.dart';
 import '../../features/recipes/presentation/pages/recipes_page.dart';
 import '../../features/reports/presentation/pages/reports_page.dart';
 import '../../features/settings/presentation/bloc/settings_bloc.dart';
@@ -142,6 +144,14 @@ class AppRouter {
             builder: (context, state) => const SettingsPage(),
           ),
         ],
+      ),
+      GoRoute(
+        path: RoutePaths.recipeDetail,
+        name: RouteNames.recipeDetail,
+        builder: (context, state) {
+          final recipe = state.extra as Recipe;
+          return RecipeDetailPage(recipe: recipe);
+        },
       ),
     ],
   );
