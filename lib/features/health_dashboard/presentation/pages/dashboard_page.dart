@@ -32,17 +32,11 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-
     _stepService = di.sl<StepCounterService>();
 
-    _loadStepsFromFirestore();
+    _initializeAppSequence();
 
-    _initSteps();
-
-    _timer = Timer.periodic(
-      const Duration(seconds: 5),
-      (timer) => _fetchSteps(),
-    );
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) => _fetchSteps());
   }
 
   @override
@@ -51,7 +45,9 @@ class _DashboardPageState extends State<DashboardPage> {
     super.dispose();
   }
 
-  Future<void> _initSteps() async {
+  Future<void> _initializeAppSequence() async {
+    await _loadStepsFromFirestore();
+
     bool permitted = await _stepService.requestPermissions();
     if (permitted) {
       await _fetchSteps();
@@ -61,11 +57,11 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _loadStepsFromFirestore() async {
     try {
       final healthRepo = di.sl<HealthRepository>();
-
       int savedSteps = await healthRepo.getDailySteps(DateTime.now());
 
-      if (savedSteps > 0 && mounted) {
-        debugPrint("Loaded cached steps: $savedSteps");
+      if (mounted) {
+        _stepService.setSavedSteps(savedSteps);
+
         setState(() {
           stepCount = savedSteps.toString();
         });
@@ -76,16 +72,18 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _fetchSteps() async {
-    int liveSteps = await _stepService.getTodaySteps();
+    int totalSteps = await _stepService.getTodaySteps();
 
     int currentUiSteps = int.tryParse(stepCount.replaceAll(',', '')) ?? 0;
 
-    if (liveSteps > currentUiSteps) {
+    if (totalSteps >= currentUiSteps) {
       if (mounted) {
         setState(() {
-          stepCount = liveSteps.toString();
+          stepCount = totalSteps.toString();
         });
-        _saveStepsToCloud(liveSteps);
+        if (totalSteps > currentUiSteps) {
+          _saveStepsToCloud(totalSteps);
+        }
       }
     }
   }
