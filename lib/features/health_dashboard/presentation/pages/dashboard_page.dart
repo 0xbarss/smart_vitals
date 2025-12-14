@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart'; //
 
 import '../../../../injection_container.dart' as di;
 import '../../../../config/routes/route_names.dart';
@@ -36,14 +37,26 @@ class _DashboardPageState extends State<DashboardPage> {
     _stepService = di.sl<StepCounterService>();
 
     _initializeAppSequence();
+    _checkConnectionStatus();
 
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) => _fetchSteps());
+    _timer = Timer.periodic(
+      const Duration(seconds: 5),
+      (timer) => _fetchSteps(),
+    );
   }
 
   @override
   void dispose() {
     _timer.cancel();
     super.dispose();
+  }
+
+  void _checkConnectionStatus() {
+    if (mounted) {
+      setState(() {
+        isSensorConnected = FlutterBluePlus.connectedDevices.isNotEmpty;
+      });
+    }
   }
 
   Future<void> _initializeAppSequence() async {
@@ -94,14 +107,26 @@ class _DashboardPageState extends State<DashboardPage> {
     await healthRepo.saveDailySteps(steps);
   }
 
-  void _toggleSensor() {
-    setState(() => isSensorConnected = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Pulse Sensor Connected via Bluetooth!"),
-        backgroundColor: Colors.green,
-      ),
-    );
+  Future<void> _toggleSensor() async {
+    await context.pushNamed(RouteNames.bleScan);
+
+    if (mounted) {
+      final connectedDevices = FlutterBluePlus.connectedDevices;
+      if (connectedDevices.isNotEmpty) {
+        setState(() => isSensorConnected = true);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Connected to ${connectedDevices.first.platformName}",
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        setState(() => isSensorConnected = false);
+      }
+    }
   }
 
   String? _encodeQueryParameters(Map<String, String> params) {
@@ -379,9 +404,9 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ChatPage()),
-              );
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ChatPage()));
             },
             backgroundColor: const Color(0xFF2563EB),
             child: const Icon(Icons.chat_bubble_outline, color: Colors.white),

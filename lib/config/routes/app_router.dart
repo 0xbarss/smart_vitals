@@ -12,6 +12,7 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/welcome_page.dart';
+import '../../features/device_connectivity/presentation/pages/ble_scan_page.dart';
 import '../../features/health_dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/health_dashboard/presentation/pages/metric_detail_page.dart';
 import '../../features/recipes/domain/entities/recipe.dart';
@@ -142,6 +143,11 @@ class AppRouter {
             path: RoutePaths.settings,
             name: RouteNames.settings,
             builder: (context, state) => const SettingsPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.bleScan,
+            name: RouteNames.bleScan,
+            builder: (context, state) => const BleScanPage(),
           ),
         ],
       ),

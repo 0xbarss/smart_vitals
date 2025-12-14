@@ -11,6 +11,8 @@ import 'features/chatbot/data/datasources/chat_remote_datasource.dart';
 import 'features/chatbot/data/repositories/chat_repository_impl.dart';
 import 'features/chatbot/domain/repositories/chat_repository.dart';
 import 'features/chatbot/presentation/bloc/chat_bloc.dart';
+import 'features/device_connectivity/data/repositories/ble_repository.dart';
+import 'features/device_connectivity/presentation/bloc/ble_bloc.dart';
 import 'features/health_dashboard/data/repositories/health_repository_impl.dart';
 import 'features/settings/presentation/bloc/settings_bloc.dart';
 
@@ -21,6 +23,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => AuthBloc(authRepository: sl()));
   sl.registerLazySingleton(() => SettingsBloc());
   sl.registerFactory(() => ChatBloc(repository: sl()));
+  sl.registerFactory(() => BleBloc(sl()));
 
   // --- REPOSITORIES ---
   sl.registerLazySingleton<AuthRepository>(
@@ -28,6 +31,7 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<HealthRepository>(() => HealthRepositoryImpl());
   sl.registerLazySingleton<ChatRepository>(() => ChatRepositoryImpl(sl()));
+  sl.registerLazySingleton(() => BleRepository());
 
   // --- DATA SOURCES ---
   sl.registerLazySingleton<AuthRemoteDataSource>(

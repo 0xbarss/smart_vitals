@@ -5,6 +5,7 @@ class RouteNames {
   static const String login = 'login';
   static const String register = 'register';
   static const String healthDetails = 'healthDetails';
+  static const String bleScan = 'bleScan';
 
   // Shell (Bottom Navigation)
   static const String home = 'home';
@@ -24,6 +25,7 @@ class RoutePaths {
   static const String login = '/login';
   static const String register = '/register';
   static const String healthDetails = '/health-details';
+  static const String bleScan = '/ble-scan';
 
   static const String home = '/home';
   static const String analysis = '/analysis';
@@ -33,5 +35,5 @@ class RoutePaths {
   static const String recipeDetail = '/recipe-detail';
 
   // Sub-routes
-  static const String metricDetail = 'metric-detail'; // relative path
+  static const String metricDetail = 'metric-detail';
 }
