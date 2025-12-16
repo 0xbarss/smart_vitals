@@ -259,7 +259,7 @@ class _RecipesPageState extends State<RecipesPage> {
         gradient: isHighContrast
             ? null
             : const LinearGradient(
-                colors: [Color(0xFF10B981), Color(0xFF059669)],
+                colors: [Color(0xFFF97316), Color(0xFFEA580C)],
               ),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(30),
@@ -355,7 +355,7 @@ class _RecipesPageState extends State<RecipesPage> {
         },
         selectedColor: isHighContrast
             ? Colors.yellowAccent
-            : const Color(0xFF10B981),
+            : const Color(0xFFEA580C),
         backgroundColor: isHighContrast ? Colors.black : Colors.white,
         labelStyle: TextStyle(
           color: isSelected
@@ -492,7 +492,7 @@ class _RecipesPageState extends State<RecipesPage> {
                                   fontSize: 10,
                                   color: isHighContrast
                                       ? Colors.white
-                                      : const Color(0xFF059669),
+                                      : const Color(0xFFEA580C),
                                 ),
                               ),
                             ),
