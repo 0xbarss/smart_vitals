@@ -205,7 +205,6 @@ class _RecipesPageState extends State<RecipesPage> {
                             .toList(),
                       ),
                     ),
-                    const SizedBox(height: 24),
 
                     if (_filteredRecipes.isEmpty)
                       Center(

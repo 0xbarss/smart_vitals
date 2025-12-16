@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart'; //
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../../../../injection_container.dart' as di;
 import '../../../../config/routes/route_names.dart';
@@ -60,28 +60,41 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _initializeAppSequence() async {
-    await _loadStepsFromFirestore();
+    int dbSteps = await _loadStepsFromFirestore();
 
     bool permitted = await _stepService.requestPermissions();
     if (permitted) {
+      int sensorSteps = await _stepService.getTodaySteps();
+
+      if (sensorSteps < dbSteps) {
+        _stepService.setSavedSteps(dbSteps);
+      } else {
+        if (mounted) {
+          setState(() {
+            stepCount = sensorSteps.toString();
+          });
+        }
+      }
+
       await _fetchSteps();
     }
   }
 
-  Future<void> _loadStepsFromFirestore() async {
+  Future<int> _loadStepsFromFirestore() async {
     try {
       final healthRepo = di.sl<HealthRepository>();
       int savedSteps = await healthRepo.getDailySteps(DateTime.now());
 
       if (mounted) {
-        _stepService.setSavedSteps(savedSteps);
 
         setState(() {
           stepCount = savedSteps.toString();
         });
       }
+      return savedSteps;
     } catch (e) {
       debugPrint("Error loading cached steps: $e");
+      return 0;
     }
   }
 
@@ -108,18 +121,31 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _toggleSensor() async {
-    await context.pushNamed(RouteNames.bleScan);
+    if (await FlutterBluePlus.adapterState.first != BluetoothAdapterState.on) {
+      try {
+        await FlutterBluePlus.turnOn();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Please turn on Bluetooth manually"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+    }
 
     if (mounted) {
+      await context.pushNamed(RouteNames.bleScan);
+
       final connectedDevices = FlutterBluePlus.connectedDevices;
       if (connectedDevices.isNotEmpty) {
         setState(() => isSensorConnected = true);
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              "Connected to ${connectedDevices.first.platformName}",
-            ),
+            content: Text("Connected to ${connectedDevices.first.platformName}"),
             backgroundColor: Colors.green,
           ),
         );
@@ -341,29 +367,8 @@ class _DashboardPageState extends State<DashboardPage> {
                     const SizedBox(height: 24),
 
                     _buildSensorButton(isHighContrast),
-                    const SizedBox(height: 24),
 
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Your Vitals",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward,
-                          size: 20,
-                          color: isHighContrast ? Colors.white : Colors.grey,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
                     _buildVitalsGrid(isHighContrast),
-
                     const SizedBox(height: 24),
 
                     Row(
