@@ -1,9 +1,22 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:csv/csv.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../../features/settings/presentation/bloc/settings_bloc.dart';
 import '../../../../features/settings/presentation/bloc/settings_state.dart';
+import '../../../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../../../features/auth/presentation/bloc/auth_state.dart';
+import '../../../../injection_container.dart' as di;
+import '../../../health_dashboard/data/repositories/health_repository_impl.dart';
+import 'report_history_page.dart';
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
@@ -30,6 +43,565 @@ class _ReportsPageState extends State<ReportsPage> {
   final TextEditingController _diastolicController = TextEditingController();
   final TextEditingController _glucoseController = TextEditingController();
 
+  String _sanitizeForPdf(String text) {
+    return text
+        .replaceAll('ı', 'i')
+        .replaceAll('İ', 'I')
+        .replaceAll('ğ', 'g')
+        .replaceAll('Ğ', 'G')
+        .replaceAll('ü', 'u')
+        .replaceAll('Ü', 'U')
+        .replaceAll('ş', 's')
+        .replaceAll('Ş', 'S')
+        .replaceAll('ö', 'o')
+        .replaceAll('Ö', 'O')
+        .replaceAll('ç', 'c')
+        .replaceAll('Ç', 'C');
+  }
+
+  Future<void> _saveToFirestore(
+    DateTime date,
+    Map<String, dynamic> data,
+    String type,
+  ) async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      try {
+        final repo = di.sl<HealthRepository>();
+        await repo.saveHealthReport(authState.user.id, date, data, type);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Saved to Cloud successfully!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Error saving: $e"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("You must be logged in to save data.")),
+      );
+    }
+  }
+
+  Future<void> _importENabizData() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final File file = File(result.files.single.path!);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Processing PDF... Please wait.")),
+          );
+        }
+
+        final List<int> bytes = await file.readAsBytes();
+        final PdfDocument document = PdfDocument(inputBytes: bytes);
+        String text = PdfTextExtractor(document).extractText();
+        document.dispose();
+
+        DateTime? extractedDate;
+        RegExp datePattern = RegExp(r'Tarih[:\s]*(\d{2}\.\d{2}\.\d{4})');
+        Match? dateMatch = datePattern.firstMatch(text);
+
+        if (dateMatch != null) {
+          try {
+            String rawDate = dateMatch.group(1)!;
+            extractedDate = DateFormat('dd.MM.yyyy').parse(rawDate);
+          } catch (e) {
+            debugPrint("Date parse error: $e");
+          }
+        }
+
+        List<String> lines = text
+            .split('\n')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+
+        Map<String, dynamic> parsedData = {};
+        Set<String> uniqueKeys = {};
+
+        for (int i = 0; i < lines.length; i++) {
+          String line = lines[i];
+          if (line.contains(':') || (line.split('.').length > 2)) continue;
+          double? value = double.tryParse(line.replaceAll(',', '.'));
+
+          if (value != null && i > 0) {
+            String name = lines[i - 1];
+            if (double.tryParse(name.replaceAll(',', '.')) == null &&
+                !name.contains('Tarih') &&
+                !name.contains('Sonuç') &&
+                name.length > 1) {
+              String unit = "";
+              String ref = "";
+
+              if (i + 1 < lines.length) {
+                String nextLine = lines[i + 1];
+                if (!nextLine.startsWith(RegExp(r'[A-Z][a-z]'))) {
+                  if (nextLine.contains('-') ||
+                      nextLine.contains('<') ||
+                      nextLine.contains('>')) {
+                    ref = nextLine;
+                  } else {
+                    unit = nextLine;
+                    if (i + 2 < lines.length) {
+                      String nextNext = lines[i + 2];
+                      if (nextNext.contains('-') ||
+                          nextNext.contains('<') ||
+                          nextNext.contains('>')) {
+                        ref = nextNext;
+                      }
+                    }
+                  }
+                }
+              }
+
+              if (!uniqueKeys.contains(name)) {
+                uniqueKeys.add(name);
+                parsedData[name] = {
+                  "result": line,
+                  "unit": unit,
+                  "reference": ref,
+                };
+              }
+            }
+          }
+        }
+
+        if (parsedData.isNotEmpty && mounted) {
+          _showImportConfirmationDialog(parsedData, initialDate: extractedDate);
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("No valid data found in PDF."),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error: $e");
+    }
+  }
+
+  Future<List<List<String>>> _fetchAndFormatData() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! Authenticated) throw Exception("User not logged in");
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(authState.user.id)
+        .collection('health_reports')
+        .orderBy('date', descending: true)
+        .get();
+
+    List<List<String>> rows = [];
+
+    rows.add([
+      "Date",
+      "Source",
+      "Test/Vital Name",
+      "Result",
+      "Unit",
+      "Reference",
+    ]);
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
+      final dateStr = DateFormat(
+        'yyyy-MM-dd',
+      ).format((data['date'] as Timestamp).toDate());
+      final type = data['type'] == 'enabiz_import' ? 'E-Nabiz' : 'Manual';
+      final content = data['data'] as Map<String, dynamic>;
+
+      content.forEach((key, value) {
+        String result = "";
+        String unit = "";
+        String ref = "";
+
+        if (value is Map) {
+          result = value['result']?.toString() ?? "";
+          unit = value['unit']?.toString() ?? "";
+          ref = value['reference']?.toString() ?? "";
+        } else {
+          result = value.toString();
+        }
+
+        rows.add([dateStr, type, key, result, unit, ref]);
+      });
+    }
+    return rows;
+  }
+
+  Future<void> _generateAndShareCSV() async {
+    try {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Fetching data and generating CSV...")),
+        );
+      }
+
+      final dataRows = await _fetchAndFormatData();
+      String csvData = const ListToCsvConverter().convert(dataRows);
+
+      final directory = await getTemporaryDirectory();
+      final path = "${directory.path}/Health_Report.csv";
+      final file = File(path);
+      await file.writeAsString(csvData);
+
+      final shareParams = ShareParams(
+        text: 'My SmartVitals Health Report',
+        files: [XFile(path)],
+      );
+      await SharePlus.instance.share(shareParams);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Export Failed: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _generateAndSharePDF() async {
+    try {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Fetching data and generating PDF...")),
+        );
+      }
+
+      final dataRows = await _fetchAndFormatData();
+
+      PdfDocument document = PdfDocument();
+      PdfPage page = document.pages.add();
+
+      page.graphics.drawString(
+        'SmartVitals Health Report',
+        PdfStandardFont(PdfFontFamily.helvetica, 20),
+        bounds: const Rect.fromLTWH(0, 0, 500, 30),
+      );
+
+      page.graphics.drawString(
+        'Generated on: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}',
+        PdfStandardFont(PdfFontFamily.helvetica, 12),
+        bounds: const Rect.fromLTWH(0, 30, 500, 20),
+      );
+
+      PdfGrid grid = PdfGrid();
+      grid.columns.add(count: 6);
+
+      final header = grid.headers.add(1)[0];
+      header.cells[0].value = 'Date';
+      header.cells[1].value = 'Source';
+      header.cells[2].value = 'Test Name';
+      header.cells[3].value = 'Result';
+      header.cells[4].value = 'Unit';
+      header.cells[5].value = 'Ref';
+
+      header.style.backgroundBrush = PdfSolidBrush(PdfColor(139, 92, 246));
+      header.style.textBrush = PdfBrushes.white;
+
+      for (int i = 1; i < dataRows.length; i++) {
+        PdfGridRow row = grid.rows.add();
+        for (int j = 0; j < 6; j++) {
+          row.cells[j].value = _sanitizeForPdf(dataRows[i][j]);
+        }
+      }
+
+      grid.style.cellPadding = PdfPaddings(
+        left: 5,
+        right: 2,
+        top: 2,
+        bottom: 2,
+      );
+      grid.draw(page: page, bounds: const Rect.fromLTWH(0, 60, 0, 0));
+
+      final List<int> bytes = await document.save();
+      document.dispose();
+
+      final directory = await getTemporaryDirectory();
+      final path = "${directory.path}/Health_Report.pdf";
+      final file = File(path);
+      await file.writeAsBytes(bytes);
+
+      final shareParams = ShareParams(
+        text: 'My SmartVitals Health Report',
+        files: [XFile(path)],
+      );
+      SharePlus.instance.share(shareParams);
+    } catch (e) {
+      debugPrint("PDF ERROR: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Export Failed: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showImportConfirmationDialog(
+    Map<String, dynamic> data, {
+    DateTime? initialDate,
+  }) {
+    DateTime selectedDate = initialDate ?? DateTime.now();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text("Import Confirmation"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("Successfully parsed ${data.length} records."),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Record Date:",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: () async {
+                      final DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        setState(() => selectedDate = picked);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(DateFormat('dd MMM yyyy').format(selectedDate)),
+                          const Icon(Icons.calendar_today, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _saveToFirestore(selectedDate, data, 'enabiz_import');
+                  },
+                  child: const Text("Save to Cloud"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showManualEntryDialog() {
+    DateTime selectedDate = DateTime.now();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text("Log Vitals"),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Date",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    InkWell(
+                      onTap: () async {
+                        final DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) {
+                          setState(() => selectedDate = picked);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              DateFormat('dd MMM yyyy').format(selectedDate),
+                            ),
+                            const Icon(Icons.calendar_today, size: 18),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _systolicController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Systolic BP (mmHg)",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _diastolicController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Diastolic BP (mmHg)",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _glucoseController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Blood Glucose (mg/dL)",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final data = {
+                      if (_systolicController.text.isNotEmpty)
+                        'systolic_bp': _systolicController.text,
+                      if (_diastolicController.text.isNotEmpty)
+                        'diastolic_bp': _diastolicController.text,
+                      if (_glucoseController.text.isNotEmpty)
+                        'blood_glucose': _glucoseController.text,
+                    };
+
+                    if (data.isNotEmpty) {
+                      Navigator.pop(context);
+                      _saveToFirestore(selectedDate, data, 'manual');
+                      _systolicController.clear();
+                      _diastolicController.clear();
+                      _glucoseController.clear();
+                    }
+                  },
+                  child: const Text("Save"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showExportOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Export Report",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
+              title: const Text("Export as PDF"),
+              subtitle: const Text(
+                "Best for printing and sharing with doctors",
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _generateAndSharePDF();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.table_chart, color: Colors.green),
+              title: const Text("Export as CSV"),
+              subtitle: const Text("Best for Excel or data analysis"),
+              onTap: () {
+                Navigator.pop(context);
+                _generateAndShareCSV();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<SettingsBloc, SettingsState>(
@@ -52,8 +624,33 @@ class _ReportsPageState extends State<ReportsPage> {
                 child: ListView(
                   padding: const EdgeInsets.all(24),
                   children: [
+                    Text(
+                      "Blood & Lab Data",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     _buildActionSection(isHC),
-                    const SizedBox(height: 24),
+
+                    const SizedBox(height: 32),
+                    Divider(
+                      color: isHC ? Colors.white24 : Colors.grey.shade300,
+                      thickness: 1,
+                    ),
+                    const SizedBox(height: 32),
+
+                    Text(
+                      "Heart Rate Analysis",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
 
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
@@ -75,12 +672,12 @@ class _ReportsPageState extends State<ReportsPage> {
                         boxShadow: isHC
                             ? null
                             : [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,8 +717,21 @@ class _ReportsPageState extends State<ReportsPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
+                    Divider(
+                      color: isHC ? Colors.white24 : Colors.grey.shade300,
+                      thickness: 1,
+                    ),
+                    const SizedBox(height: 32),
 
+                    Text(
+                      "Daily Summary",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
                     GridView.count(
                       crossAxisCount: 2,
                       crossAxisSpacing: 16,
@@ -162,7 +772,12 @@ class _ReportsPageState extends State<ReportsPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
+                    Divider(
+                      color: isHC ? Colors.white24 : Colors.grey.shade300,
+                      thickness: 1,
+                    ),
+                    const SizedBox(height: 32),
 
                     Text(
                       "AI Insights",
@@ -210,10 +825,10 @@ class _ReportsPageState extends State<ReportsPage> {
         gradient: isHighContrast
             ? null
             : const LinearGradient(
-          colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+                colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
@@ -296,134 +911,52 @@ class _ReportsPageState extends State<ReportsPage> {
           ],
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Importing data from e-Nabız..."),
-                  backgroundColor: Colors.blue,
+        Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: ElevatedButton.icon(
+                onPressed: _importENabizData,
+                icon: const Icon(Icons.cloud_download, size: 18),
+                label: const Text("Import e-Nabız"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE11D48),
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-              );
-            },
-            icon: const Icon(Icons.cloud_download, size: 18),
-            label: const Text("Import from e-Nabız"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE11D48),
-              foregroundColor: Colors.white,
-              elevation: 2,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
               ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 1,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ReportHistoryPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.history, size: 18),
+                label: const Text("History"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueGrey,
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
-    );
-  }
-
-  void _showManualEntryDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Log Vitals"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _systolicController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: "Systolic BP (mmHg)",
-                prefixIcon: Icon(Icons.favorite_border),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _diastolicController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: "Diastolic BP (mmHg)",
-                prefixIcon: Icon(Icons.favorite),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _glucoseController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: "Blood Glucose (mg/dL)",
-                prefixIcon: Icon(Icons.water_drop),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Data Logged Successfully!"),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            child: const Text("Save"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showExportOptions() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Export Report",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
-              title: const Text("Export as PDF"),
-              subtitle: const Text(
-                "Best for printing and sharing with doctors",
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Generating PDF...")),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.table_chart, color: Colors.green),
-              title: const Text("Export as CSV"),
-              subtitle: const Text("Best for Excel or data analysis"),
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Exporting CSV...")),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -459,15 +992,15 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _buildStatCard(
-      String title,
-      String value,
-      String trend,
-      IconData icon,
-      Color color,
-      bool isHC,
-      Color bgColor,
-      Color textColor,
-      ) {
+    String title,
+    String value,
+    String trend,
+    IconData icon,
+    Color color,
+    bool isHC,
+    Color bgColor,
+    Color textColor,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -477,11 +1010,11 @@ class _ReportsPageState extends State<ReportsPage> {
         boxShadow: isHC
             ? null
             : [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-          ),
-        ],
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -527,14 +1060,14 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _buildInsightItem(
-      String text,
-      IconData icon,
-      Color iconColor,
-      bool isHC,
-      Color bgColor,
-      Color textColor,
-      Color subTextColor,
-      ) {
+    String text,
+    IconData icon,
+    Color iconColor,
+    bool isHC,
+    Color bgColor,
+    Color textColor,
+    Color subTextColor,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -545,11 +1078,11 @@ class _ReportsPageState extends State<ReportsPage> {
         boxShadow: isHC
             ? null
             : [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 5,
-          ),
-        ],
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 5,
+                ),
+              ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

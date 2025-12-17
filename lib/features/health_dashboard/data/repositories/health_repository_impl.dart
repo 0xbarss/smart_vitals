@@ -5,6 +5,8 @@ abstract class HealthRepository {
   Future<void> saveDailySteps(int steps);
 
   Future<int> getDailySteps(DateTime date);
+
+  Future<void> saveHealthReport(String userId, DateTime date, Map<String, dynamic> data, String type);
 }
 
 class HealthRepositoryImpl implements HealthRepository {
@@ -59,6 +61,24 @@ class HealthRepositoryImpl implements HealthRepository {
       return 0;
     } catch (e) {
       return 0;
+    }
+  }
+
+  @override
+  Future<void> saveHealthReport(String userId, DateTime date, Map<String, dynamic> data, String type) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('health_reports')
+          .add({
+        'date': Timestamp.fromDate(date),
+        'created_at': FieldValue.serverTimestamp(),
+        'type': type,
+        'data': data,
+      });
+    } catch (e) {
+      throw Exception("Error saving report: $e");
     }
   }
 }
