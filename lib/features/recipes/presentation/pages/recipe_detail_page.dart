@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -50,11 +49,7 @@ class RecipeDetailPage extends StatelessWidget {
                   ),
                 ),
                 flexibleSpace: FlexibleSpaceBar(
-                  background: CachedNetworkImage(
-                    imageUrl: recipe.imageUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: Colors.grey),
-                  ),
+                  background: Container(color: Colors.grey)
                 ),
               ),
 

@@ -1,9 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../config/routes/route_names.dart';
+import '../../../../core/services/recipes_data_helper.dart';
 import '../../../../features/settings/presentation/bloc/settings_bloc.dart';
 import '../../../../features/settings/presentation/bloc/settings_state.dart';
 import '../../domain/entities/recipe.dart';
@@ -16,133 +18,14 @@ class RecipesPage extends StatefulWidget {
 }
 
 class _RecipesPageState extends State<RecipesPage> {
-  final List<Recipe> _allRecipes = [
-    const Recipe(
-      id: '1',
-      title: 'Quinoa & Avocado Salad',
-      imageUrl:
-          'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=600&auto=format&fit=crop',
-      calories: 320,
-      timeMins: 15,
-      category: 'Lunch',
-      tags: ['Vegan', 'Gluten Free'],
-      ingredients: [],
-      instructions: [],
-    ),
-    const Recipe(
-      id: '2',
-      title: 'Grilled Salmon with Asparagus',
-      imageUrl:
-          'https://images.unsplash.com/photo-1467003909585-2f8a7270028d?q=80&w=600&auto=format&fit=crop',
-      calories: 450,
-      timeMins: 25,
-      category: 'Dinner',
-      tags: ['High Protein', 'Keto'],
-      ingredients: [],
-      instructions: [],
-    ),
-    const Recipe(
-      id: '3',
-      title: 'Berry Smoothie Bowl',
-      imageUrl:
-          'https://images.unsplash.com/photo-1577805947697-89e18249d767?q=80&w=600&auto=format&fit=crop',
-      calories: 280,
-      timeMins: 10,
-      category: 'Breakfast',
-      tags: ['Vegetarian', 'Low Carb'],
-      ingredients: [],
-      instructions: [],
-    ),
-    const Recipe(
-      id: '4',
-      title: 'Chicken Stir-Fry',
-      imageUrl:
-          'https://images.unsplash.com/photo-1603133872878-684f57143b33?q=80&w=600&auto=format&fit=crop',
-      calories: 520,
-      timeMins: 30,
-      category: 'Dinner',
-      tags: ['High Protein', 'Dairy Free'],
-      ingredients: [],
-      instructions: [],
-    ),
-    const Recipe(
-      id: '5',
-      title: 'Oatmeal with Blueberries',
-      imageUrl:
-          'https://images.unsplash.com/photo-1517673132405-a56a62b18caf?q=80&w=600&auto=format&fit=crop',
-      calories: 350,
-      timeMins: 10,
-      category: 'Breakfast',
-      tags: ['High Fiber', 'Vegan'],
-      ingredients: [],
-      instructions: [],
-    ),
-    const Recipe(
-      id: '6',
-      title: 'Avocado Toast & Egg',
-      imageUrl:
-          'https://images.unsplash.com/photo-1525351463974-b38319cd8785?q=80&w=600&auto=format&fit=crop',
-      calories: 410,
-      timeMins: 12,
-      category: 'Breakfast',
-      tags: ['Vegetarian', 'Healthy Fats'],
-      ingredients: [],
-      instructions: [],
-    ),
-    const Recipe(
-      id: '7',
-      title: 'Greek Yogurt Parfait',
-      imageUrl:
-          'https://images.unsplash.com/photo-1488477181946-6428a029177b?q=80&w=600&auto=format&fit=crop',
-      calories: 220,
-      timeMins: 5,
-      category: 'Snacks',
-      tags: ['Low Calorie', 'High Protein'],
-      ingredients: [],
-      instructions: [],
-    ),
-    const Recipe(
-      id: '8',
-      title: 'Lentil Soup',
-      imageUrl:
-          'https://images.unsplash.com/photo-1547592166-23ac45744acd?q=80&w=600&auto=format&fit=crop',
-      calories: 290,
-      timeMins: 40,
-      category: 'Lunch',
-      tags: ['Vegan', 'High Fiber'],
-      ingredients: [],
-      instructions: [],
-    ),
-    const Recipe(
-      id: '9',
-      title: 'Turkey Wrap',
-      imageUrl:
-          'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?q=80&w=600&auto=format&fit=crop',
-      calories: 380,
-      timeMins: 10,
-      category: 'Lunch',
-      tags: ['Balanced', 'Low Fat'],
-      ingredients: [],
-      instructions: [],
-    ),
-    const Recipe(
-      id: '10',
-      title: 'Almond Energy Balls',
-      imageUrl:
-          'https://images.unsplash.com/photo-1604329760661-e71dc831d65a?q=80&w=600&auto=format&fit=crop',
-      calories: 150,
-      timeMins: 20,
-      category: 'Snacks',
-      tags: ['Vegan', 'Gluten Free'],
-      ingredients: [],
-      instructions: [],
-    ),
-  ];
+  final RecipeDatabaseHelper _dbHelper = RecipeDatabaseHelper();
 
-  late List<Recipe> _filteredRecipes;
+  List<Recipe> _recipes = [];
+  bool _isLoading = true;
   String _selectedCategory = 'All';
-  String _searchQuery = '';
+  Timer? _debounce;
   final TextEditingController _searchController = TextEditingController();
+
   final List<String> _categories = [
     'All',
     'Breakfast',
@@ -154,23 +37,65 @@ class _RecipesPageState extends State<RecipesPage> {
   @override
   void initState() {
     super.initState();
-    _filteredRecipes = _allRecipes;
+    _loadRecipes();
   }
 
-  void _runFilter() {
-    setState(() {
-      _filteredRecipes = _allRecipes.where((recipe) {
-        final matchesCategory =
-            _selectedCategory == 'All' || recipe.category == _selectedCategory;
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
 
-        final matchesSearch =
-            recipe.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            recipe.tags.any(
-              (tag) => tag.toLowerCase().contains(_searchQuery.toLowerCase()),
-            );
+  Future<void> _loadRecipes({String query = ""}) async {
+    setState(() => _isLoading = true);
 
-        return matchesCategory && matchesSearch;
+    try {
+      final List<Map<String, dynamic>> results = await _dbHelper.searchRecipes(
+        query,
+      );
+
+      List<Recipe> mappedRecipes = results.map((row) {
+        return Recipe(
+          id: row['recipe_title'] ?? '0',
+          title: row['recipe_title'] ?? 'Unknown Recipe',
+          calories: row['Energy (KCAL)'] != null ? row['Energy (KCAL)'].round(): 0,
+          timeMins: row['est_cook_time_min'] ?? 60,
+          category: 'Dinner',
+          tags: [
+            row['health_level'] == 'healthy' ? 'Healthy':
+            row['health_level'] == 'moderate' ? 'Moderate': 'Unhealthy'
+          ],
+          ingredients: List<String>.from(jsonDecode(row['ingredients'])),
+          instructions: List<String>.from(jsonDecode(row['directions'])),
+        );
       }).toList();
+
+      if (_selectedCategory != 'All') {
+        mappedRecipes = mappedRecipes.where((r) {
+          return r.title.contains(_selectedCategory) ||
+              r.category == _selectedCategory;
+        }).toList();
+      }
+
+      if (mounted) {
+        setState(() {
+          _recipes = mappedRecipes;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading recipes: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _loadRecipes(query: query);
     });
   }
 
@@ -189,56 +114,67 @@ class _RecipesPageState extends State<RecipesPage> {
               _buildHeader(isHighContrast),
 
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(24),
+                child: Column(
                   children: [
-                    _buildSearchBar(isHighContrast),
-                    const SizedBox(height: 24),
-
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: _categories
-                            .map(
-                              (cat) => _buildCategoryChip(cat, isHighContrast),
-                            )
-                            .toList(),
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          _buildSearchBar(isHighContrast),
+                          const SizedBox(height: 24),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: _categories
+                                  .map(
+                                    (cat) =>
+                                        _buildCategoryChip(cat, isHighContrast),
+                                  )
+                                  .toList(),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 
-                    if (_filteredRecipes.isEmpty)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32.0),
-                          child: Text(
-                            "No recipes found.",
-                            style: TextStyle(
-                              color: isHighContrast
-                                  ? Colors.white54
-                                  : Colors.grey,
+                    Expanded(
+                      child: _isLoading
+                          ? Center(
+                              child: CircularProgressIndicator(
+                                color: isHighContrast
+                                    ? Colors.yellowAccent
+                                    : const Color(0xFFEA580C),
+                              ),
+                            )
+                          : _recipes.isEmpty
+                          ? Center(
+                              child: Text(
+                                "No recipes found.",
+                                style: TextStyle(
+                                  color: isHighContrast
+                                      ? Colors.white54
+                                      : Colors.grey,
+                                ),
+                              ),
+                            )
+                          : GridView.builder(
+                              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    childAspectRatio: 0.72,
+                                    crossAxisSpacing: 16,
+                                    mainAxisSpacing: 16,
+                                  ),
+                              itemCount: _recipes.length,
+                              itemBuilder: (context, index) {
+                                return _buildRecipeCard(
+                                  _recipes[index],
+                                  isHighContrast,
+                                );
+                              },
                             ),
-                          ),
-                        ),
-                      )
-                    else
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.72,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                            ),
-                        itemCount: _filteredRecipes.length,
-                        itemBuilder: (context, index) {
-                          return _buildRecipeCard(
-                            _filteredRecipes[index],
-                            isHighContrast,
-                          );
-                        },
-                      ),
+                    ),
                   ],
                 ),
               ),
@@ -313,12 +249,9 @@ class _RecipesPageState extends State<RecipesPage> {
       ),
       child: TextField(
         controller: _searchController,
-        onChanged: (value) {
-          _searchQuery = value;
-          _runFilter();
-        },
+        onChanged: _onSearchChanged,
         decoration: InputDecoration(
-          hintText: "Search for meals...",
+          hintText: "Search recipes...",
           hintStyle: TextStyle(
             color: isHighContrast ? Colors.white54 : Colors.grey,
           ),
@@ -348,8 +281,9 @@ class _RecipesPageState extends State<RecipesPage> {
           if (selected) {
             setState(() {
               _selectedCategory = label;
-              _runFilter();
             });
+
+            _loadRecipes(query: _searchController.text);
           }
         },
         selectedColor: isHighContrast
@@ -402,18 +336,14 @@ class _RecipesPageState extends State<RecipesPage> {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(16),
                 ),
-                child: CachedNetworkImage(
-                  imageUrl: recipe.imageUrl,
-                  fit: BoxFit.cover,
+                child: Container(
+                  color: Colors.grey.shade200,
                   width: double.infinity,
-                  placeholder: (context, url) =>
-                      Container(color: Colors.grey.shade200),
-                  errorWidget: (context, url, error) =>
-                      Container(color: Colors.grey.shade200),
+                  child: Icon(Icons.broken_image, color: Colors.grey),
                 ),
               ),
             ),
-      
+
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -433,7 +363,7 @@ class _RecipesPageState extends State<RecipesPage> {
                     ),
                   ),
                   const SizedBox(height: 6),
-      
+
                   Row(
                     children: [
                       Icon(
@@ -442,62 +372,31 @@ class _RecipesPageState extends State<RecipesPage> {
                         color: isHighContrast ? Colors.white70 : Colors.grey,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        "${recipe.timeMins} min",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isHighContrast ? Colors.white70 : Colors.grey,
+                      Flexible(
+                        child: Text(
+                          "${recipe.timeMins} min",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isHighContrast ? Colors.white70 : Colors.grey,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const Spacer(),
-                      Text(
-                        "${recipe.calories} kcal",
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isHighContrast
-                              ? Colors.greenAccent
-                              : Colors.orange,
+                      Flexible(
+                        child: Text(
+                          "${recipe.calories} kcal",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isHighContrast
+                                ? Colors.greenAccent
+                                : Colors.orange,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-      
-                  SizedBox(
-                    height: 20,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: recipe.tags
-                          .map(
-                            (tag) => Container(
-                              margin: const EdgeInsets.only(right: 4),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isHighContrast
-                                    ? Colors.grey[800]
-                                    : const Color(0xFFECFDF5),
-                                borderRadius: BorderRadius.circular(4),
-                                border: isHighContrast
-                                    ? Border.all(color: Colors.white24)
-                                    : null,
-                              ),
-                              child: Text(
-                                tag,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: isHighContrast
-                                      ? Colors.white
-                                      : const Color(0xFFEA580C),
-                                ),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
                   ),
                 ],
               ),
