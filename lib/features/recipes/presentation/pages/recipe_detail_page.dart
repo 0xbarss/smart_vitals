@@ -8,8 +8,9 @@ import '../../domain/entities/recipe.dart';
 
 class RecipeDetailPage extends StatelessWidget {
   final Recipe recipe;
+  final String? imageURL;
 
-  const RecipeDetailPage({super.key, required this.recipe});
+  const RecipeDetailPage({super.key, required this.recipe, this.imageURL});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +18,6 @@ class RecipeDetailPage extends StatelessWidget {
       builder: (context, settings) {
         final isHighContrast = settings.highContrast;
 
-        // Colors
         final bgColor = isHighContrast ? Colors.black : Colors.white;
         final textColor = isHighContrast
             ? Colors.yellowAccent
@@ -49,7 +49,15 @@ class RecipeDetailPage extends StatelessWidget {
                   ),
                 ),
                 flexibleSpace: FlexibleSpaceBar(
-                  background: Container(color: Colors.grey)
+                  background: imageURL != null
+                      ? Image.network(
+                    imageURL!,
+                    fit: BoxFit.cover,
+                  )
+                      : Container(
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.restaurant, size: 50),
+                  ),
                 ),
               ),
 

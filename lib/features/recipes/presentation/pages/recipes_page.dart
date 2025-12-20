@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../config/routes/route_names.dart';
+import '../../../../core/services/google_image_service.dart';
 import '../../../../core/services/recipes_data_helper.dart';
 import '../../../../features/settings/presentation/bloc/settings_bloc.dart';
 import '../../../../features/settings/presentation/bloc/settings_state.dart';
@@ -19,6 +20,9 @@ class RecipesPage extends StatefulWidget {
 
 class _RecipesPageState extends State<RecipesPage> {
   final RecipeDatabaseHelper _dbHelper = RecipeDatabaseHelper();
+
+  final GoogleImageService _googleService = GoogleImageService();
+  static final Map<String, String> _imageCache = {};
 
   List<Recipe> _recipes = [];
   bool _isLoading = true;
@@ -59,12 +63,17 @@ class _RecipesPageState extends State<RecipesPage> {
         return Recipe(
           id: row['recipe_title'] ?? '0',
           title: row['recipe_title'] ?? 'Unknown Recipe',
-          calories: row['Energy (KCAL)'] != null ? row['Energy (KCAL)'].round(): 0,
+          calories: row['Energy (KCAL)'] != null
+              ? row['Energy (KCAL)'].round()
+              : 0,
           timeMins: row['est_cook_time_min'] ?? 60,
           category: 'Dinner',
           tags: [
-            row['health_level'] == 'healthy' ? 'Healthy':
-            row['health_level'] == 'moderate' ? 'Moderate': 'Unhealthy'
+            row['health_level'] == 'healthy'
+                ? 'Healthy'
+                : row['health_level'] == 'moderate'
+                ? 'Moderate'
+                : 'Unhealthy',
           ],
           ingredients: List<String>.from(jsonDecode(row['ingredients'])),
           instructions: List<String>.from(jsonDecode(row['directions'])),
@@ -311,7 +320,10 @@ class _RecipesPageState extends State<RecipesPage> {
   Widget _buildRecipeCard(Recipe recipe, bool isHighContrast) {
     return GestureDetector(
       onTap: () {
-        context.pushNamed(RouteNames.recipeDetail, extra: recipe);
+        context.pushNamed(RouteNames.recipeDetail, extra: {
+          'recipe': recipe,
+          'imageURL': _imageCache[recipe.title]
+        });
       },
       child: Container(
         decoration: BoxDecoration(
@@ -331,18 +343,7 @@ class _RecipesPageState extends State<RecipesPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-                child: Container(
-                  color: Colors.grey.shade200,
-                  width: double.infinity,
-                  child: Icon(Icons.broken_image, color: Colors.grey),
-                ),
-              ),
-            ),
+            _buildRecipeImage(recipe, isHighContrast),
 
             Padding(
               padding: const EdgeInsets.all(12),
@@ -377,7 +378,9 @@ class _RecipesPageState extends State<RecipesPage> {
                           "${recipe.timeMins} min",
                           style: TextStyle(
                             fontSize: 12,
-                            color: isHighContrast ? Colors.white70 : Colors.grey,
+                            color: isHighContrast
+                                ? Colors.white70
+                                : Colors.grey,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -402,6 +405,64 @@ class _RecipesPageState extends State<RecipesPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecipeImage(Recipe recipe, bool isHighContrast) {
+    if (_imageCache.containsKey(recipe.title)) {
+      return _imageCard(_imageCache[recipe.title]!);
+    }
+
+    return FutureBuilder<String?>(
+      future: _googleService.fetchRecipeImage(recipe.title),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _loadingBox(isHighContrast);
+        }
+
+        if (snapshot.hasData && snapshot.data != null) {
+          _imageCache[recipe.title] = snapshot.data!;
+          return _imageCard(snapshot.data!);
+        }
+
+        return _placeholderBox(isHighContrast);
+      },
+    );
+  }
+
+  Widget _imageCard(String url) {
+    return Expanded(
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        child: Image.network(
+          url,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          errorBuilder: (context, error, stackTrace) => Center(child: const Icon(Icons.broken_image)),
+        ),
+      ),
+    );
+  }
+
+  Widget _loadingBox(bool isHighContrast) {
+    return Expanded(
+      child: Container(
+        color: isHighContrast ? Colors.grey[900] : Colors.grey[200],
+        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+    );
+  }
+
+  Widget _placeholderBox(bool isHighContrast) {
+    return Expanded(
+      child: Container(
+        width: double.infinity,
+        color: isHighContrast ? Colors.grey[900] : Colors.grey[200],
+        child: Icon(
+          Icons.restaurant_menu,
+          color: isHighContrast ? Colors.white24 : Colors.grey,
         ),
       ),
     );

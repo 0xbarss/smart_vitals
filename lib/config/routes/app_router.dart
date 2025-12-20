@@ -146,8 +146,8 @@ class AppRouter {
         path: RoutePaths.recipeDetail,
         name: RouteNames.recipeDetail,
         builder: (context, state) {
-          final recipe = state.extra as Recipe;
-          return RecipeDetailPage(recipe: recipe);
+          final map = state.extra as Map<String, dynamic>;
+          return RecipeDetailPage(recipe: map['recipe'], imageURL: map['imageURL']);
         },
       ),
     ],
