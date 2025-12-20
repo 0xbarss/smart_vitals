@@ -918,7 +918,7 @@ class _ReportsPageState extends State<ReportsPage> {
               child: ElevatedButton.icon(
                 onPressed: _importENabizData,
                 icon: const Icon(Icons.cloud_download, size: 18),
-                label: const Text("Import e-Nabız"),
+                label: const Text("Import PDF"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE11D48),
                   foregroundColor: Colors.white,
