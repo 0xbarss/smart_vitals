@@ -39,7 +39,7 @@ class RecipeDetailPage extends StatelessWidget {
                     : Colors.white,
                 leading: Container(
                   margin: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.black54,
                     shape: BoxShape.circle,
                   ),
@@ -53,10 +53,16 @@ class RecipeDetailPage extends StatelessWidget {
                       ? Image.network(
                     imageURL!,
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                      );
+                    },
                   )
                       : Container(
                     color: Colors.grey[200],
-                    child: const Icon(Icons.restaurant, size: 50),
+                    child: const Icon(Icons.restaurant, size: 50, color: Colors.grey),
                   ),
                 ),
               ),
@@ -81,19 +87,19 @@ class RecipeDetailPage extends StatelessWidget {
                         children: recipe.tags
                             .map(
                               (tag) => Chip(
-                                label: Text(tag),
-                                backgroundColor: isHighContrast
-                                    ? Colors.grey[800]
-                                    : const Color(0xFFECFDF5),
-                                labelStyle: TextStyle(
-                                  color: isHighContrast
-                                      ? Colors.white
-                                      : const Color(0xFF059669),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                side: BorderSide.none,
-                              ),
-                            )
+                            label: Text(tag),
+                            backgroundColor: isHighContrast
+                                ? Colors.grey[800]
+                                : const Color(0xFFECFDF5),
+                            labelStyle: TextStyle(
+                              color: isHighContrast
+                                  ? Colors.white
+                                  : const Color(0xFF059669),
+                              fontWeight: FontWeight.bold,
+                            ),
+                            side: BorderSide.none,
+                          ),
+                        )
                             .toList(),
                       ),
                       const SizedBox(height: 20),
@@ -145,7 +151,7 @@ class RecipeDetailPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       ...recipe.ingredients.map(
-                        (ing) => Padding(
+                            (ing) => Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
                           child: Row(
                             children: [
@@ -183,7 +189,7 @@ class RecipeDetailPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       ...recipe.instructions.asMap().entries.map(
-                        (entry) => Padding(
+                            (entry) => Padding(
                           padding: const EdgeInsets.only(bottom: 24.0),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,11 +244,11 @@ class RecipeDetailPage extends StatelessWidget {
   }
 
   Widget _buildStat(
-    IconData icon,
-    String value,
-    String label,
-    bool isHighContrast,
-  ) {
+      IconData icon,
+      String value,
+      String label,
+      bool isHighContrast,
+      ) {
     return Column(
       children: [
         Icon(
