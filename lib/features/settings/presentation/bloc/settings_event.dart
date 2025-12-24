@@ -21,3 +21,15 @@ class ChangeAppMode extends SettingsEvent {
   final AppMode mode;
   ChangeAppMode(this.mode);
 }
+
+class UpdateDietaryPreference extends SettingsEvent {
+  final String key;
+  final bool value;
+  UpdateDietaryPreference(this.key, this.value);
+}
+
+class UpdateAllergyPreference extends SettingsEvent {
+  final String key;
+  final bool value;
+  UpdateAllergyPreference(this.key, this.value);
+}

@@ -35,7 +35,7 @@ class RecipeDatabaseHelper {
     return await openDatabase(path, version: 1);
   }
 
-  Future<List<Map<String, dynamic>>> searchRecipes(String query, {int limit = 20, int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> searchRecipes(String query, {int limit = 1000, int offset = 0}) async {
     final db = await database;
 
     if (query.isEmpty) {

@@ -19,5 +19,19 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<ChangeAppMode>((event, emit) {
       emit(state.copyWith(appMode: event.mode));
     });
+
+    on<UpdateDietaryPreference>((event, emit) {
+      final updatedDietary = Map<String, bool>.from(state.dietary);
+      updatedDietary[event.key] = event.value;
+
+      emit(state.copyWith(dietary: updatedDietary));
+    });
+
+    on<UpdateAllergyPreference>((event, emit) {
+      final updatedAllergies = Map<String, bool>.from(state.allergies);
+      updatedAllergies[event.key] = event.value;
+
+      emit(state.copyWith(allergies: updatedAllergies));
+    });
   }
 }

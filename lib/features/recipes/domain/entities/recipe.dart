@@ -7,8 +7,13 @@ class Recipe {
   final List<String> tags;
   final List<String> ingredients;
   final List<String> instructions;
+  final double carbs;
+  final double protein;
+  final double fat;
+  final double water;
+  final double sodium;
 
-  const Recipe({
+  Recipe({
     required this.id,
     required this.title,
     required this.calories,
@@ -17,5 +22,10 @@ class Recipe {
     required this.tags,
     required this.ingredients,
     required this.instructions,
+    this.carbs = 0,
+    this.protein = 0,
+    this.fat = 0,
+    this.water = 0,
+    this.sodium = 0,
   });
 }
