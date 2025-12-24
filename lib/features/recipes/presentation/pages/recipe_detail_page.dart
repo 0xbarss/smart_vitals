@@ -107,35 +107,22 @@ class RecipeDetailPage extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: isHighContrast
-                              ? Colors.grey[900]
-                              : Colors.grey[50],
+                          color: isHighContrast ? Colors.grey[900] : Colors.grey[50],
                           borderRadius: BorderRadius.circular(16),
-                          border: isHighContrast
-                              ? Border.all(color: Colors.white24)
-                              : null,
+                          border: isHighContrast ? Border.all(color: Colors.white24) : null,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        child: Wrap(
+                          spacing: 20,
+                          runSpacing: 16,
+                          alignment: WrapAlignment.spaceAround,
                           children: [
-                            _buildStat(
-                              Icons.access_time,
-                              "${recipe.timeMins} min",
-                              "Cook Time",
-                              isHighContrast,
-                            ),
-                            _buildStat(
-                              Icons.local_fire_department,
-                              "${recipe.calories}",
-                              "Calories",
-                              isHighContrast,
-                            ),
-                            _buildStat(
-                              Icons.restaurant_menu,
-                              "2",
-                              "Servings",
-                              isHighContrast,
-                            ),
+                            _buildStat(Icons.access_time, "${recipe.timeMins}m", "Time", isHighContrast),
+                            _buildStat(Icons.local_fire_department, "${recipe.calories}", "Kcal", isHighContrast),
+                            _buildStat(Icons.grain, "${recipe.carbs.toStringAsFixed(1)}g", "Carbs", isHighContrast),
+                            _buildStat(Icons.fitness_center, "${recipe.protein.toStringAsFixed(1)}g", "Protein", isHighContrast),
+                            _buildStat(Icons.opacity, "${recipe.fat.toStringAsFixed(1)}g", "Fat", isHighContrast),
+                            _buildStat(Icons.water_drop, "${recipe.water.toStringAsFixed(1)}g", "Water", isHighContrast),
+                            _buildStat(Icons.shutter_speed, "${recipe.sodium.round()}mg", "Sodium", isHighContrast),
                           ],
                         ),
                       ),

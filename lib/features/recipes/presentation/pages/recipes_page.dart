@@ -32,10 +32,9 @@ class _RecipesPageState extends State<RecipesPage> {
 
   final List<String> _categories = [
     'All',
-    'Breakfast',
-    'Lunch',
-    'Dinner',
-    'Snacks',
+    'High Protein',
+    'Low Carb',
+    'Low Sodium',
   ];
 
   @override
@@ -54,36 +53,73 @@ class _RecipesPageState extends State<RecipesPage> {
   Future<void> _loadRecipes({String query = ""}) async {
     setState(() => _isLoading = true);
 
+    final settings = context.read<SettingsBloc>().state;
+
     try {
       final List<Map<String, dynamic>> results = await _dbHelper.searchRecipes(
         query,
       );
 
       List<Recipe> mappedRecipes = results.map((row) {
+        List<String> dynamicTags = [];
+
+        dynamicTags.add(
+            row['health_level'] == 'healthy' ? 'Healthy' :
+            row['health_level'] == 'moderate' ? 'Moderate' : 'Unhealthy'
+        );
+
+        if (row['is_vegan'] == 1) dynamicTags.add('Vegan');
+        if (row['is_vegetarian'] == 1) dynamicTags.add('Vegetarian');
+        if (row['is_halal'] == 1) dynamicTags.add('Halal');
+        if (row['is_kosher'] == 1) dynamicTags.add('Kosher');
+        if (row['is_nut_free'] == 1) dynamicTags.add('Nut Free');
+        if (row['is_dairy_free'] == 1) dynamicTags.add('Dairy Free');
+        if (row['is_gluten_free'] == 1) dynamicTags.add('Gluten Free');
+
         return Recipe(
           id: row['recipe_title'] ?? '0',
           title: row['recipe_title'] ?? 'Unknown Recipe',
-          calories: row['Energy (KCAL)'] != null
-              ? row['Energy (KCAL)'].round()
-              : 0,
+          calories: (row['Energy (KCAL)'] ?? 0).round(),
           timeMins: row['est_cook_time_min'] ?? 60,
-          category: 'Dinner',
-          tags: [
-            row['health_level'] == 'healthy'
-                ? 'Healthy'
-                : row['health_level'] == 'moderate'
-                ? 'Moderate'
-                : 'Unhealthy',
-          ],
+          category: row['category'] ?? '',
+          tags: dynamicTags,
           ingredients: List<String>.from(jsonDecode(row['ingredients'])),
           instructions: List<String>.from(jsonDecode(row['directions'])),
+          carbs: (row['Carbohydrate, by difference (G)'] ?? 0).toDouble(),
+          protein: (row['Protein (G)'] ?? 0).toDouble(),
+          fat: (row['Total lipid (fat) (G)'] ?? 0).toDouble(),
+          water: (row['Water (G)'] ?? 0).toDouble(),
+          sodium: (row['Sodium, Na (MG)'] ?? 0).toDouble(),
         );
+      }).toList();
+
+      mappedRecipes = mappedRecipes.where((recipe) {
+        if (settings.dietary['vegan']! && !recipe.tags.contains('Vegan')) return false;
+        if (settings.dietary['vegetarian']! && !recipe.tags.contains('Vegetarian')) return false;
+        if (settings.dietary['halal']! && !recipe.tags.contains('Halal')) return false;
+        if (settings.dietary['kosher']! && !recipe.tags.contains('Kosher')) return false;
+
+        if (settings.allergies['nuts']! && !recipe.tags.contains('Nut Free')) return false;
+        if (settings.allergies['gluten']! && !recipe.tags.contains('Gluten Free')) return false;
+        if (settings.allergies['dairy']! && !recipe.tags.contains('Dairy Free')) return false;
+
+        return true;
       }).toList();
 
       if (_selectedCategory != 'All') {
         mappedRecipes = mappedRecipes.where((r) {
-          return r.title.contains(_selectedCategory) ||
-              r.category == _selectedCategory;
+          bool matchesCategory = r.category == _selectedCategory || r.title.contains(_selectedCategory);
+
+          bool matchesNutritional = false;
+          if (_selectedCategory == 'High Protein') {
+            matchesNutritional = r.protein > 15;
+          } else if (_selectedCategory == 'Low Carb') {
+            matchesNutritional = r.carbs < 20;
+          } else if (_selectedCategory == 'Low Sodium') {
+            matchesNutritional = r.sodium < 140;
+          }
+
+          return matchesCategory || matchesNutritional;
         }).toList();
       }
 
@@ -95,9 +131,7 @@ class _RecipesPageState extends State<RecipesPage> {
       }
     } catch (e) {
       debugPrint("Error loading recipes: $e");
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
