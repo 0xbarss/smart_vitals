@@ -38,6 +38,7 @@ class _RecipesPageState extends State<RecipesPage> {
     'Fat',
     'Carbs',
     'Sodium',
+    'Health Score',
   ];
 
   @override
@@ -67,8 +68,11 @@ class _RecipesPageState extends State<RecipesPage> {
         List<String> dynamicTags = [];
 
         dynamicTags.add(
-            row['health_level'] == 'healthy' ? 'Healthy' :
-            row['health_level'] == 'moderate' ? 'Moderate' : 'Unhealthy'
+          row['health_level'] == 'healthy'
+              ? 'Healthy'
+              : row['health_level'] == 'moderate'
+              ? 'Moderate'
+              : 'Unhealthy',
         );
 
         if (row['is_vegan'] == 1) dynamicTags.add('Vegan');
@@ -84,7 +88,7 @@ class _RecipesPageState extends State<RecipesPage> {
           title: row['recipe_title'] ?? 'Unknown Recipe',
           calories: (row['Energy (KCAL)'] ?? 0).round(),
           timeMins: row['est_cook_time_min'] ?? 60,
-          category: row['category'] ?? '',
+          healthScore: row['healthiness_score'] ?? 0,
           tags: dynamicTags,
           ingredients: List<String>.from(jsonDecode(row['ingredients'])),
           instructions: List<String>.from(jsonDecode(row['directions'])),
@@ -97,14 +101,30 @@ class _RecipesPageState extends State<RecipesPage> {
       }).toList();
 
       mappedRecipes = mappedRecipes.where((recipe) {
-        if (settings.dietary['vegan']! && !recipe.tags.contains('Vegan')) return false;
-        if (settings.dietary['vegetarian']! && !recipe.tags.contains('Vegetarian')) return false;
-        if (settings.dietary['halal']! && !recipe.tags.contains('Halal')) return false;
-        if (settings.dietary['kosher']! && !recipe.tags.contains('Kosher')) return false;
+        if (settings.dietary['vegan']! && !recipe.tags.contains('Vegan')) {
+          return false;
+        }
+        if (settings.dietary['vegetarian']! &&
+            !recipe.tags.contains('Vegetarian')) {
+          return false;
+        }
+        if (settings.dietary['halal']! && !recipe.tags.contains('Halal')) {
+          return false;
+        }
+        if (settings.dietary['kosher']! && !recipe.tags.contains('Kosher')) {
+          return false;
+        }
 
-        if (settings.allergies['nuts']! && !recipe.tags.contains('Nut Free')) return false;
-        if (settings.allergies['gluten']! && !recipe.tags.contains('Gluten Free')) return false;
-        if (settings.allergies['dairy']! && !recipe.tags.contains('Dairy Free')) return false;
+        if (settings.allergies['nuts']! && !recipe.tags.contains('Nut Free')) {
+          return false;
+        }
+        if (settings.allergies['gluten']! &&
+            !recipe.tags.contains('Gluten Free')) {
+          return false;
+        }
+        if (settings.allergies['dairy']! && !recipe.tags.contains('Dairy Free')) {
+          return false;
+        }
 
         return true;
       }).toList();
@@ -130,14 +150,15 @@ class _RecipesPageState extends State<RecipesPage> {
             valA = a.sodium;
             valB = b.sodium;
             break;
+          case 'Health Score':
+            valA = a.healthScore;
+            valB = b.healthScore;
           default:
             valA = a.calories;
             valB = b.calories;
         }
 
-        return _isAscending
-            ? valA.compareTo(valB)
-            : valB.compareTo(valA);
+        return _isAscending ? valA.compareTo(valB) : valB.compareTo(valA);
       });
 
       if (mounted) {
@@ -179,50 +200,47 @@ class _RecipesPageState extends State<RecipesPage> {
                     Padding(
                       padding: const EdgeInsets.all(24),
                       child: Column(
-                        children: [
-                          _buildSearchBar(isHighContrast),
-                          const SizedBox(height: 24),
-                        ],
+                        children: [_buildSearchBar(isHighContrast)],
                       ),
                     ),
 
                     Expanded(
                       child: _isLoading
                           ? Center(
-                              child: CircularProgressIndicator(
-                                color: isHighContrast
-                                    ? Colors.yellowAccent
-                                    : const Color(0xFFEA580C),
-                              ),
-                            )
+                        child: CircularProgressIndicator(
+                          color: isHighContrast
+                              ? Colors.yellowAccent
+                              : const Color(0xFFEA580C),
+                        ),
+                      )
                           : _recipes.isEmpty
                           ? Center(
-                              child: Text(
-                                "No recipes found.",
-                                style: TextStyle(
-                                  color: isHighContrast
-                                      ? Colors.white54
-                                      : Colors.grey,
-                                ),
-                              ),
-                            )
+                        child: Text(
+                          "No recipes found.",
+                          style: TextStyle(
+                            color: isHighContrast
+                                ? Colors.white54
+                                : Colors.grey,
+                          ),
+                        ),
+                      )
                           : GridView.builder(
-                              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    childAspectRatio: 0.72,
-                                    crossAxisSpacing: 16,
-                                    mainAxisSpacing: 16,
-                                  ),
-                              itemCount: _recipes.length,
-                              itemBuilder: (context, index) {
-                                return _buildRecipeCard(
-                                  _recipes[index],
-                                  isHighContrast,
-                                );
-                              },
-                            ),
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                        gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.7,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: _recipes.length,
+                        itemBuilder: (context, index) {
+                          return _buildRecipeCard(
+                            _recipes[index],
+                            isHighContrast,
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -243,8 +261,8 @@ class _RecipesPageState extends State<RecipesPage> {
         gradient: isHighContrast
             ? null
             : const LinearGradient(
-                colors: [Color(0xFFF97316), Color(0xFFEA580C)],
-              ),
+          colors: [Color(0xFFF97316), Color(0xFFEA580C)],
+        ),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
@@ -291,11 +309,19 @@ class _RecipesPageState extends State<RecipesPage> {
                   onChanged: _onSearchChanged,
                   decoration: InputDecoration(
                     hintText: "Search recipes...",
-                    prefixIcon: Icon(Icons.search, color: isHighContrast ? Colors.yellowAccent : Colors.grey),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: isHighContrast ? Colors.yellowAccent : Colors.grey,
+                    ),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
                   ),
-                  style: TextStyle(color: isHighContrast ? Colors.white : Colors.black),
+                  style: TextStyle(
+                    color: isHighContrast ? Colors.white : Colors.black,
+                  ),
                 ),
               ),
             ),
@@ -313,7 +339,10 @@ class _RecipesPageState extends State<RecipesPage> {
             padding: const EdgeInsets.only(top: 8),
             child: Text(
               "Sorting by $_sortMetric (${_isAscending ? 'Low to High' : 'High to Low'})",
-              style: TextStyle(fontSize: 12, color: isHighContrast ? Colors.yellowAccent : Colors.grey[600]),
+              style: TextStyle(
+                fontSize: 12,
+                color: isHighContrast ? Colors.yellowAccent : Colors.grey[600],
+              ),
             ),
           ),
       ],
@@ -324,13 +353,18 @@ class _RecipesPageState extends State<RecipesPage> {
     return Container(
       decoration: _inputDecoration(isHighContrast),
       child: PopupMenuButton<String>(
-        icon: Icon(Icons.filter_list, color: isHighContrast ? Colors.yellowAccent : Colors.grey),
+        icon: Icon(
+          Icons.filter_list,
+          color: isHighContrast ? Colors.yellowAccent : Colors.grey,
+        ),
         tooltip: "Select Metric",
         onSelected: (val) {
           setState(() => _sortMetric = val);
           _loadRecipes(query: _searchController.text);
         },
-        itemBuilder: (context) => _metrics.map((m) => PopupMenuItem(value: m, child: Text(m))).toList(),
+        itemBuilder: (context) => _metrics
+            .map((m) => PopupMenuItem(value: m, child: Text(m)))
+            .toList(),
       ),
     );
   }
@@ -356,19 +390,84 @@ class _RecipesPageState extends State<RecipesPage> {
     return BoxDecoration(
       color: isHighContrast ? Colors.grey[900] : Colors.white,
       borderRadius: BorderRadius.circular(16),
-      border: isHighContrast ? Border.all(color: Colors.white) : Border.all(color: Colors.grey.shade200),
+      border: isHighContrast
+          ? Border.all(color: Colors.white)
+          : Border.all(color: Colors.grey.shade200),
+    );
+  }
+
+  Widget _buildHealthBadge(int score, bool isHighContrast) {
+    Color color;
+    IconData heartIcon;
+    double opacity = 1.0;
+
+    if (score >= 70) {
+      color = isHighContrast ? Colors.greenAccent : Colors.green;
+      heartIcon = Icons.favorite;
+    } else if (score >= 40) {
+      color = isHighContrast ? Colors.orangeAccent : Colors.orange;
+      heartIcon = Icons.favorite_border;
+    } else {
+      color = isHighContrast ? Colors.redAccent : Colors.red;
+      heartIcon = Icons.heart_broken;
+      opacity = 0.8;
+    }
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.8, end: 1.0),
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.elasticOut,
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: value,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: opacity),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                )
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  heartIcon,
+                  size: 12,
+                  color: isHighContrast ? Colors.black : Colors.white,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  "$score",
+                  style: TextStyle(
+                    color: isHighContrast ? Colors.black : Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildRecipeCard(Recipe recipe, bool isHighContrast) {
     return GestureDetector(
       onTap: () {
-        context.pushNamed(RouteNames.recipeDetail, extra: {
-          'recipe': recipe,
-          'imageURL': _imageCache[recipe.title]
-        });
+        context.pushNamed(
+          RouteNames.recipeDetail,
+          extra: {'recipe': recipe, 'imageURL': _imageCache[recipe.title]},
+        );
       },
       child: Container(
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: isHighContrast ? Colors.black : Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -376,17 +475,29 @@ class _RecipesPageState extends State<RecipesPage> {
           boxShadow: isHighContrast
               ? null
               : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildRecipeImage(recipe, isHighContrast),
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _buildRecipeImage(recipe, isHighContrast),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: _buildHealthBadge(recipe.healthScore, isHighContrast),
+                  ),
+                ],
+              ),
+            ),
 
             Padding(
               padding: const EdgeInsets.all(12),
@@ -396,7 +507,7 @@ class _RecipesPageState extends State<RecipesPage> {
                 children: [
                   Text(
                     recipe.title,
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
@@ -406,8 +517,7 @@ class _RecipesPageState extends State<RecipesPage> {
                           : const Color(0xFF1F2937),
                     ),
                   ),
-                  const SizedBox(height: 6),
-
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       Icon(
@@ -416,30 +526,13 @@ class _RecipesPageState extends State<RecipesPage> {
                         color: isHighContrast ? Colors.white70 : Colors.grey,
                       ),
                       const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          "${recipe.timeMins} min",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isHighContrast
-                                ? Colors.white70
-                                : Colors.grey,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const Spacer(),
-                      Flexible(
-                        child: Text(
-                          "${recipe.calories} kcal",
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: isHighContrast
-                                ? Colors.greenAccent
-                                : Colors.orange,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                      Text(
+                        "${recipe.timeMins} min",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isHighContrast
+                              ? Colors.white70
+                              : Colors.grey,
                         ),
                       ),
                     ],
@@ -476,37 +569,31 @@ class _RecipesPageState extends State<RecipesPage> {
   }
 
   Widget _imageCard(String url) {
-    return Expanded(
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        child: Image.network(
-          url,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          errorBuilder: (context, error, stackTrace) => Center(child: const Icon(Icons.broken_image)),
-        ),
-      ),
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (context, error, stackTrace) =>
+          Center(child: const Icon(Icons.broken_image)),
     );
   }
 
   Widget _loadingBox(bool isHighContrast) {
-    return Expanded(
-      child: Container(
-        color: isHighContrast ? Colors.grey[900] : Colors.grey[200],
-        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
+    return Container(
+      color: isHighContrast ? Colors.grey[900] : Colors.grey[200],
+      child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
     );
   }
 
   Widget _placeholderBox(bool isHighContrast) {
-    return Expanded(
-      child: Container(
-        width: double.infinity,
-        color: isHighContrast ? Colors.grey[900] : Colors.grey[200],
-        child: Icon(
-          Icons.restaurant_menu,
-          color: isHighContrast ? Colors.white24 : Colors.grey,
-        ),
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: isHighContrast ? Colors.grey[900] : Colors.grey[200],
+      child: Icon(
+        Icons.restaurant_menu,
+        color: isHighContrast ? Colors.white24 : Colors.grey,
       ),
     );
   }
