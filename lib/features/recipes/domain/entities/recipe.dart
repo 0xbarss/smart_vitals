@@ -3,7 +3,7 @@ class Recipe {
   final String title;
   final int calories;
   final int timeMins;
-  final String category;
+  final int healthScore;
   final List<String> tags;
   final List<String> ingredients;
   final List<String> instructions;
@@ -18,7 +18,7 @@ class Recipe {
     required this.title,
     required this.calories,
     required this.timeMins,
-    required this.category,
+    required this.healthScore,
     required this.tags,
     required this.ingredients,
     required this.instructions,
