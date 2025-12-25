@@ -26,15 +26,18 @@ class _RecipesPageState extends State<RecipesPage> {
 
   List<Recipe> _recipes = [];
   bool _isLoading = true;
-  String _selectedCategory = 'All';
   Timer? _debounce;
   final TextEditingController _searchController = TextEditingController();
 
-  final List<String> _categories = [
-    'All',
-    'High Protein',
-    'Low Carb',
-    'Low Sodium',
+  String _sortMetric = 'Calories';
+  bool _isAscending = true;
+
+  final List<String> _metrics = [
+    'Calories',
+    'Protein',
+    'Fat',
+    'Carbs',
+    'Sodium',
   ];
 
   @override
@@ -106,22 +109,36 @@ class _RecipesPageState extends State<RecipesPage> {
         return true;
       }).toList();
 
-      if (_selectedCategory != 'All') {
-        mappedRecipes = mappedRecipes.where((r) {
-          bool matchesCategory = r.category == _selectedCategory || r.title.contains(_selectedCategory);
+      mappedRecipes.sort((a, b) {
+        num valA = 0;
+        num valB = 0;
 
-          bool matchesNutritional = false;
-          if (_selectedCategory == 'High Protein') {
-            matchesNutritional = r.protein > 15;
-          } else if (_selectedCategory == 'Low Carb') {
-            matchesNutritional = r.carbs < 20;
-          } else if (_selectedCategory == 'Low Sodium') {
-            matchesNutritional = r.sodium < 140;
-          }
+        switch (_sortMetric) {
+          case 'Protein':
+            valA = a.protein;
+            valB = b.protein;
+            break;
+          case 'Fat':
+            valA = a.fat;
+            valB = b.fat;
+            break;
+          case 'Carbs':
+            valA = a.carbs;
+            valB = b.carbs;
+            break;
+          case 'Sodium':
+            valA = a.sodium;
+            valB = b.sodium;
+            break;
+          default:
+            valA = a.calories;
+            valB = b.calories;
+        }
 
-          return matchesCategory || matchesNutritional;
-        }).toList();
-      }
+        return _isAscending
+            ? valA.compareTo(valB)
+            : valB.compareTo(valA);
+      });
 
       if (mounted) {
         setState(() {
@@ -165,17 +182,6 @@ class _RecipesPageState extends State<RecipesPage> {
                         children: [
                           _buildSearchBar(isHighContrast),
                           const SizedBox(height: 24),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: _categories
-                                  .map(
-                                    (cat) =>
-                                        _buildCategoryChip(cat, isHighContrast),
-                                  )
-                                  .toList(),
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -273,81 +279,84 @@ class _RecipesPageState extends State<RecipesPage> {
   }
 
   Widget _buildSearchBar(bool isHighContrast) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isHighContrast ? Colors.grey[900] : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: isHighContrast
-            ? Border.all(color: Colors.white)
-            : Border.all(color: Colors.grey.shade200),
-        boxShadow: isHighContrast
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                decoration: _inputDecoration(isHighContrast),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  decoration: InputDecoration(
+                    hintText: "Search recipes...",
+                    prefixIcon: Icon(Icons.search, color: isHighContrast ? Colors.yellowAccent : Colors.grey),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  ),
+                  style: TextStyle(color: isHighContrast ? Colors.white : Colors.black),
                 ),
-              ],
-      ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: _onSearchChanged,
-        decoration: InputDecoration(
-          hintText: "Search recipes...",
-          hintStyle: TextStyle(
-            color: isHighContrast ? Colors.white54 : Colors.grey,
-          ),
-          prefixIcon: Icon(
-            Icons.search,
-            color: isHighContrast ? Colors.yellowAccent : Colors.grey,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 16,
-          ),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            _buildSortMetricPicker(isHighContrast),
+
+            const SizedBox(width: 8),
+
+            _buildDirectionToggle(isHighContrast),
+          ],
         ),
-        style: TextStyle(color: isHighContrast ? Colors.white : Colors.black),
+        if (_sortMetric != 'Default')
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              "Sorting by $_sortMetric (${_isAscending ? 'Low to High' : 'High to Low'})",
+              style: TextStyle(fontSize: 12, color: isHighContrast ? Colors.yellowAccent : Colors.grey[600]),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSortMetricPicker(bool isHighContrast) {
+    return Container(
+      decoration: _inputDecoration(isHighContrast),
+      child: PopupMenuButton<String>(
+        icon: Icon(Icons.filter_list, color: isHighContrast ? Colors.yellowAccent : Colors.grey),
+        tooltip: "Select Metric",
+        onSelected: (val) {
+          setState(() => _sortMetric = val);
+          _loadRecipes(query: _searchController.text);
+        },
+        itemBuilder: (context) => _metrics.map((m) => PopupMenuItem(value: m, child: Text(m))).toList(),
       ),
     );
   }
 
-  Widget _buildCategoryChip(String label, bool isHighContrast) {
-    final isSelected = _selectedCategory == label;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: isSelected,
-        onSelected: (bool selected) {
-          if (selected) {
-            setState(() {
-              _selectedCategory = label;
-            });
-
-            _loadRecipes(query: _searchController.text);
-          }
+  Widget _buildDirectionToggle(bool isHighContrast) {
+    return Container(
+      decoration: _inputDecoration(isHighContrast),
+      child: IconButton(
+        icon: Icon(
+          _isAscending ? Icons.arrow_upward : Icons.arrow_downward,
+          color: isHighContrast ? Colors.yellowAccent : Colors.grey,
+        ),
+        tooltip: _isAscending ? "Low to High" : "High to Low",
+        onPressed: () {
+          setState(() => _isAscending = !_isAscending);
+          _loadRecipes(query: _searchController.text);
         },
-        selectedColor: isHighContrast
-            ? Colors.yellowAccent
-            : const Color(0xFFEA580C),
-        backgroundColor: isHighContrast ? Colors.black : Colors.white,
-        labelStyle: TextStyle(
-          color: isSelected
-              ? (isHighContrast ? Colors.black : Colors.white)
-              : (isHighContrast ? Colors.white : Colors.black),
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(
-            color: isSelected
-                ? Colors.transparent
-                : (isHighContrast ? Colors.white : Colors.grey.shade300),
-          ),
-        ),
       ),
+    );
+  }
+
+  BoxDecoration _inputDecoration(bool isHighContrast) {
+    return BoxDecoration(
+      color: isHighContrast ? Colors.grey[900] : Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      border: isHighContrast ? Border.all(color: Colors.white) : Border.all(color: Colors.grey.shade200),
     );
   }
 
