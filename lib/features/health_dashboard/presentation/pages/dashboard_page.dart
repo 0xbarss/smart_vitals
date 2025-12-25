@@ -345,13 +345,6 @@ class _DashboardPageState extends State<DashboardPage> {
         final Color bgColor = isHighContrast
             ? Colors.black
             : const Color(0xFFF9FAFB);
-        final Color textColor = isHighContrast
-            ? Colors.yellowAccent
-            : const Color(0xFF1F2937);
-        final Color cardColor = isHighContrast ? Colors.black : Colors.white;
-        final Color borderColor = isHighContrast
-            ? Colors.white
-            : Colors.transparent;
 
         return Scaffold(
           backgroundColor: bgColor,
@@ -370,38 +363,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
                     _buildVitalsGrid(isHighContrast),
                     const SizedBox(height: 24),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Your Goals",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
-                          ),
-                        ),
-                        Text(
-                          "Manage",
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: isHighContrast
-                                ? Colors.white
-                                : Colors.blue.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _buildGoalsList(
-                      cardColor,
-                      borderColor,
-                      textColor,
-                      isHighContrast,
-                    ),
-                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -775,116 +736,6 @@ class _DashboardPageState extends State<DashboardPage> {
           onTap: () {},
         ),
       ],
-    );
-  }
-
-  Widget _buildGoalsList(
-    Color cardColor,
-    Color borderColor,
-    Color textColor,
-    bool isHighContrast,
-  ) {
-    return Column(
-      children: [
-        _buildGoalItem(
-          "Daily Calories",
-          "2150",
-          "2000 kcal",
-          1.0,
-          Colors.orange,
-          cardColor,
-          borderColor,
-          textColor,
-          isHighContrast,
-        ),
-        _buildGoalItem(
-          "Body Fat",
-          "22",
-          "18 %",
-          0.7,
-          Colors.purple,
-          cardColor,
-          borderColor,
-          textColor,
-          isHighContrast,
-        ),
-        _buildGoalItem(
-          "Water Intake",
-          "6",
-          "8 glasses",
-          0.75,
-          Colors.blue,
-          cardColor,
-          borderColor,
-          textColor,
-          isHighContrast,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGoalItem(
-    String label,
-    String current,
-    String target,
-    double progress,
-    Color color,
-    Color bgColor,
-    Color borderColor,
-    Color textColor,
-    bool isHighContrast,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-        boxShadow: isHighContrast
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                label,
-                style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
-              ),
-              Text(
-                "$current / $target",
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isHighContrast ? Colors.white70 : Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: isHighContrast
-                  ? Colors.grey[800]
-                  : Colors.grey.shade200,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                isHighContrast ? Colors.yellowAccent : color,
-              ),
-              minHeight: 8,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

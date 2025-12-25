@@ -8,7 +8,7 @@ class VitalCard extends StatelessWidget {
   final Color iconColor;
   final Color iconBgColor;
   final VoidCallback onTap;
-  final bool isHighContrast; // New Parameter
+  final bool isHighContrast;
 
   const VitalCard({
     super.key,
@@ -19,19 +19,17 @@ class VitalCard extends StatelessWidget {
     required this.iconColor,
     required this.iconBgColor,
     required this.onTap,
-    this.isHighContrast = false, // Default false
+    this.isHighContrast = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Determine colors based on mode
     final bgColor = isHighContrast ? Colors.black : Colors.white;
     final borderColor = isHighContrast ? Colors.white : Colors.transparent;
     final titleColor = isHighContrast ? Colors.white70 : Colors.grey[500];
     final valueColor = isHighContrast ? Colors.yellowAccent : const Color(0xFF1F2937);
     final unitColor = isHighContrast ? Colors.white70 : Colors.grey[500];
 
-    // Icon Box
     final iconBoxColor = isHighContrast ? Colors.grey[900] : iconBgColor;
     final iconBoxIconColor = isHighContrast ? Colors.yellowAccent : iconColor;
     final iconBoxBorder = isHighContrast ? Border.all(color: Colors.white) : null;
@@ -39,7 +37,7 @@ class VitalCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(20),
@@ -67,7 +65,11 @@ class VitalCard extends StatelessWidget {
             const Spacer(),
             Text(
               title,
-              style: TextStyle(color: titleColor, fontSize: 12),
+              style: TextStyle(
+                  color: titleColor,
+                  fontSize: 12,
+                  overflow: TextOverflow.ellipsis
+              ),
             ),
             const SizedBox(height: 4),
             Row(
@@ -79,6 +81,7 @@ class VitalCard extends StatelessWidget {
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: valueColor,
+                    overflow: TextOverflow.ellipsis
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -86,7 +89,11 @@ class VitalCard extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 2),
                   child: Text(
                     unit,
-                    style: TextStyle(fontSize: 12, color: unitColor),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: unitColor,
+                        overflow: TextOverflow.ellipsis
+                    ),
                   ),
                 ),
               ],
