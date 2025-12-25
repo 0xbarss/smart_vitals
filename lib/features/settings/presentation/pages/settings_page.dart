@@ -25,6 +25,9 @@ class _SettingsPageState extends State<SettingsPage> {
   late TextEditingController _emailController;
   late TextEditingController _emEmailController;
   late TextEditingController _emPhoneController;
+  late TextEditingController _ageController;
+  late TextEditingController _weightController;
+  late TextEditingController _heightController;
 
   bool _isSavingProfile = false;
 
@@ -38,12 +41,18 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     final authState = context.read<AuthBloc>().state;
+    int age = 0;
+    double weight = 0.0;
+    double height = 0.0;
     String initialName = "";
     String initialEmail = "";
 
     if (authState is Authenticated) {
       initialName = authState.user.name ?? "";
       initialEmail = authState.user.email;
+      age = authState.user.age ?? 0;
+      weight = authState.user.weight ?? 0.0;
+      height = authState.user.height ?? 0.0;
     }
 
     _nameController = TextEditingController(text: initialName);
@@ -54,6 +63,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _emPhoneController = TextEditingController(
       text: authState is Authenticated ? authState.user.emergencyPhone : "",
     );
+    _ageController = TextEditingController(text: age > 0 ? age.toString() : "");
+    _weightController = TextEditingController(text: weight > 0 ? weight.toString() : "");
+    _heightController = TextEditingController(text: height > 0 ? height.toString() : "");
   }
 
   @override
@@ -62,6 +74,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _emailController.dispose();
     _emEmailController.dispose();
     _emPhoneController.dispose();
+    _ageController.dispose();
+    _weightController.dispose();
+    _heightController.dispose();
     super.dispose();
   }
 
@@ -74,24 +89,13 @@ class _SettingsPageState extends State<SettingsPage> {
   void _updateProfile() {
     if (_nameController.text.isEmpty) return;
 
-    if (_emEmailController.text.isNotEmpty &&
-        !_emEmailController.text.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Invalid Emergency Email"),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+    final int age = int.tryParse(_ageController.text) ?? 0;
+    final double weight = double.tryParse(_weightController.text) ?? 0.0;
+    final double height = double.tryParse(_heightController.text) ?? 0.0;
 
-    String phone = _emPhoneController.text.trim();
-    if (phone.isNotEmpty && phone.length < 10) {
+    if (age <= 0 || weight <= 0 || height <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please enter a valid phone number"),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text("Please enter valid bio-data"), backgroundColor: Colors.red),
       );
       return;
     }
@@ -104,6 +108,9 @@ class _SettingsPageState extends State<SettingsPage> {
         email: _emailController.text.trim(),
         emergencyEmail: _emEmailController.text.trim(),
         emergencyPhone: _emPhoneController.text.trim(),
+        age: age,
+        weight: weight,
+        height: height,
       ),
     );
   }
@@ -147,16 +154,16 @@ class _SettingsPageState extends State<SettingsPage> {
                     gradient: isHighContrast
                         ? null
                         : const LinearGradient(
-                      colors: [Color(0xFF374151), Color(0xFF1F2937)],
-                    ),
+                            colors: [Color(0xFF374151), Color(0xFF1F2937)],
+                          ),
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(24),
                       bottomRight: Radius.circular(24),
                     ),
                     border: isHighContrast
                         ? const Border(
-                      bottom: BorderSide(color: Colors.white, width: 1),
-                    )
+                            bottom: BorderSide(color: Colors.white, width: 1),
+                          )
                         : null,
                   ),
                   child: Text(
@@ -189,6 +196,29 @@ class _SettingsPageState extends State<SettingsPage> {
                               Icons.person_outline,
                               _nameController,
                               isHighContrast,
+                            ),
+                            _buildProfileField(
+                              "Age",
+                              Icons.calendar_today,
+                              _ageController,
+                              isHighContrast,
+                              keyboardType: TextInputType.number,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildProfileField(
+                              "Weight (kg)",
+                              Icons.monitor_weight_outlined,
+                              _weightController,
+                              isHighContrast,
+                              keyboardType: TextInputType.number,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildProfileField(
+                              "Height (cm)",
+                              Icons.height,
+                              _heightController,
+                              isHighContrast,
+                              keyboardType: TextInputType.number,
                             ),
                             const SizedBox(height: 12),
                             _buildProfileField(
@@ -235,8 +265,8 @@ class _SettingsPageState extends State<SettingsPage> {
                                       : const Color(0xFF2563EB),
                                   side: isHighContrast
                                       ? const BorderSide(
-                                    color: Colors.yellowAccent,
-                                  )
+                                          color: Colors.yellowAccent,
+                                        )
                                       : null,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -247,22 +277,22 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                                 child: _isSavingProfile
                                     ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
                                     : Text(
-                                  "Update Profile",
-                                  style: TextStyle(
-                                    color: isHighContrast
-                                        ? Colors.yellowAccent
-                                        : Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                        "Update Profile",
+                                        style: TextStyle(
+                                          color: isHighContrast
+                                              ? Colors.yellowAccent
+                                              : Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                               ),
                             ),
                           ],
@@ -291,15 +321,15 @@ class _SettingsPageState extends State<SettingsPage> {
                               children: settingsState.dietary.keys
                                   .map(
                                     (k) => _buildFilterChip(
-                                  k,
-                                  settingsState.dietary, // Use BLoC State
-                                  isHighContrast
-                                      ? Colors.yellow
-                                      : Colors.green,
-                                  isHighContrast,
-                                  false,
-                                ),
-                              )
+                                      k,
+                                      settingsState.dietary,
+                                      isHighContrast
+                                          ? Colors.yellow
+                                          : Colors.green,
+                                      isHighContrast,
+                                      false,
+                                    ),
+                                  )
                                   .toList(),
                             ),
                             const SizedBox(height: 16),
@@ -314,15 +344,15 @@ class _SettingsPageState extends State<SettingsPage> {
                               children: settingsState.allergies.keys
                                   .map(
                                     (k) => _buildFilterChip(
-                                  k,
-                                  settingsState.allergies, // Use BLoC State
-                                  isHighContrast
-                                      ? Colors.yellow
-                                      : Colors.red,
-                                  isHighContrast,
-                                  true,
-                                ),
-                              )
+                                      k,
+                                      settingsState.allergies,
+                                      isHighContrast
+                                          ? Colors.yellow
+                                          : Colors.red,
+                                      isHighContrast,
+                                      true,
+                                    ),
+                                  )
                                   .toList(),
                             ),
                           ],
@@ -376,12 +406,12 @@ class _SettingsPageState extends State<SettingsPage> {
                           boxShadow: isHighContrast
                               ? null
                               : [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                         ),
                         child: Column(
                           children: [
@@ -443,7 +473,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               Icons.contrast,
                               settingsState.highContrast,
                               isHighContrast,
-                                  (val) => context.read<SettingsBloc>().add(
+                              (val) => context.read<SettingsBloc>().add(
                                 ToggleHighContrast(val),
                               ),
                             ),
@@ -453,7 +483,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               Icons.motion_photos_off,
                               settingsState.reduceMotion,
                               isHighContrast,
-                                  (val) => context.read<SettingsBloc>().add(
+                              (val) => context.read<SettingsBloc>().add(
                                 ToggleReduceMotion(val),
                               ),
                             ),
@@ -519,12 +549,12 @@ class _SettingsPageState extends State<SettingsPage> {
         boxShadow: isHighContrast
             ? null
             : [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Column(
         children: [
@@ -579,15 +609,15 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildProfileField(
-      String label,
-      IconData icon,
-      TextEditingController ctrl,
-      bool isHighContrast, {
-        bool isPassword = false,
-        String? hint,
-        TextInputType? keyboardType,
-        List<TextInputFormatter>? formatters,
-      }) {
+    String label,
+    IconData icon,
+    TextEditingController ctrl,
+    bool isHighContrast, {
+    bool isPassword = false,
+    String? hint,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? formatters,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -628,21 +658,25 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildFilterChip(
-      String key,
-      Map<String, bool> map,
-      MaterialColor color,
-      bool isHighContrast,
-      bool isAllergy,
-      ) {
+    String key,
+    Map<String, bool> map,
+    MaterialColor color,
+    bool isHighContrast,
+    bool isAllergy,
+  ) {
     final isSelected = map[key]!;
     final activeColor = isHighContrast ? Colors.yellowAccent : color;
 
     return GestureDetector(
       onTap: () {
         if (isAllergy) {
-          context.read<SettingsBloc>().add(UpdateAllergyPreference(key, !isSelected));
+          context.read<SettingsBloc>().add(
+            UpdateAllergyPreference(key, !isSelected),
+          );
         } else {
-          context.read<SettingsBloc>().add(UpdateDietaryPreference(key, !isSelected));
+          context.read<SettingsBloc>().add(
+            UpdateDietaryPreference(key, !isSelected),
+          );
         }
       },
       child: Container(
@@ -673,11 +707,11 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildSwitchRow(
-      String title,
-      String subtitle,
-      String key,
-      bool isHighContrast,
-      ) {
+    String title,
+    String subtitle,
+    String key,
+    bool isHighContrast,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -706,11 +740,11 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildFontBtn(
-      String label,
-      double val,
-      double currentLevel,
-      bool isHighContrast,
-      ) {
+    String label,
+    double val,
+    double currentLevel,
+    bool isHighContrast,
+  ) {
     final isSelected = currentLevel == val;
     return Expanded(
       child: GestureDetector(
@@ -742,12 +776,12 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildAccessSwitch(
-      String label,
-      IconData icon,
-      bool val,
-      bool isHighContrast,
-      Function(bool) onChanged,
-      ) {
+    String label,
+    IconData icon,
+    bool val,
+    bool isHighContrast,
+    Function(bool) onChanged,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [

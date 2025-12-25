@@ -8,7 +8,7 @@ class WelcomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB), // bg-gray-50
+      backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -17,7 +17,6 @@ class WelcomePage extends StatelessWidget {
             children: [
               const Spacer(),
 
-              // Logo or Icon (Optional, added for visual balance like the React mock)
               Container(
                 width: 80,
                 height: 80,
@@ -25,51 +24,50 @@ class WelcomePage extends StatelessWidget {
                   color: Colors.blue.shade50,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.favorite, size: 40, color: Color(0xFF2563EB)),
+                child: const Icon(
+                  Icons.favorite,
+                  size: 40,
+                  color: Color(0xFF2563EB),
+                ),
               ),
 
               const SizedBox(height: 32),
 
-              // Title
               const Text(
                 "Welcome to SmartVitals",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 28, // text-3xl approx
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937), // text-gray-800
+                  color: Color(0xFF1F2937),
                 ),
               ),
 
               const SizedBox(height: 12),
 
-              // Subtitle
               Text(
                 "Monitor your health metrics, track vitals, and get personalized insights.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.grey.shade600, // text-gray-600
+                  color: Colors.grey.shade600,
                   height: 1.5,
                 ),
               ),
 
               const Spacer(),
 
-              // --- BUTTONS ---
-
-              // Login Button (Solid Blue)
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
                   onPressed: () => context.goNamed(RouteNames.login),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB), // bg-blue-600
+                    backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16), // rounded-2xl
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                   child: const Text(
@@ -81,7 +79,6 @@ class WelcomePage extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              // Create Account Button (Outlined)
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -89,10 +86,10 @@ class WelcomePage extends StatelessWidget {
                   onPressed: () => context.goNamed(RouteNames.register),
                   style: OutlinedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF2563EB), // text-blue-600
-                    side: const BorderSide(color: Color(0xFF2563EB), width: 2), // border-2 border-blue-600
+                    foregroundColor: const Color(0xFF2563EB),
+                    side: const BorderSide(color: Color(0xFF2563EB), width: 2),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16), // rounded-2xl
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                   child: const Text(

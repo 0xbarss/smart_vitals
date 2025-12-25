@@ -26,12 +26,18 @@ class AuthUpdateProfile extends AuthEvent {
   final String email;
   final String emergencyEmail;
   final String emergencyPhone;
+  final int age;
+  final double weight;
+  final double height;
 
   AuthUpdateProfile({
     required this.name,
     required this.email,
     required this.emergencyEmail,
     required this.emergencyPhone,
+    required this.age,
+    required this.weight,
+    required this.height,
   });
 }
 

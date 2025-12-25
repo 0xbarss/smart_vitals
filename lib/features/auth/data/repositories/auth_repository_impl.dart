@@ -8,8 +8,7 @@ class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Stream<UserEntity?> get authStateChanges =>
-      remoteDataSource.authStateChanges;
+  Stream<UserEntity?> get authStateChanges => remoteDataSource.authStateChanges;
 
   @override
   Future<UserEntity> login(String email, String password) async {
@@ -19,13 +18,35 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> register({required String email, required String password, required String name}) {
+  Future<void> register({
+    required String email,
+    required String password,
+    required String name,
+  }) {
     return remoteDataSource.register(email, password, name);
   }
 
   @override
-  Future<void> updateUser(String uid, String name, String email, String emergencyEmail, String emergencyPhone) async {
-    await remoteDataSource.updateUserData(uid, name, email, emergencyEmail, emergencyPhone);
+  Future<void> updateUser(
+    String uid,
+    String name,
+    String email,
+    String emergencyEmail,
+    String emergencyPhone,
+    int age,
+    double weight,
+    double height,
+  ) async {
+    await remoteDataSource.updateUserData(
+      uid,
+      name,
+      email,
+      emergencyEmail,
+      emergencyPhone,
+      age,
+      weight,
+      height,
+    );
   }
 
   @override
