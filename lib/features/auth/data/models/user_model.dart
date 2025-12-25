@@ -12,6 +12,9 @@ class UserModel extends UserEntity {
     super.age,
     super.height,
     super.weight,
+    super.diabetesRiskScore,
+    super.hypertensionRiskScore,
+    super.heartRiskScore,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -24,6 +27,9 @@ class UserModel extends UserEntity {
       age: map['age'],
       height: (map['height'] as num?)?.toDouble(),
       weight: (map['weight'] as num?)?.toDouble(),
+      diabetesRiskScore: (map['diabetesRiskScore'] as num?)?.toDouble(),
+      hypertensionRiskScore: (map['hypertensionRiskScore'] as num?)?.toDouble(),
+      heartRiskScore: (map['heartRiskScore'] as num?)?.toDouble(),
     );
   }
 
@@ -37,6 +43,9 @@ class UserModel extends UserEntity {
       'age': age,
       'height': height,
       'weight': weight,
+      'diabetesRiskScore': diabetesRiskScore,
+      'hypertensionRiskScore': hypertensionRiskScore,
+      'heartRiskScore': heartRiskScore,
       'updatedAt': FieldValue.serverTimestamp(),
     };
   }

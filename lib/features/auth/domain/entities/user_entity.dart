@@ -9,6 +9,9 @@ class UserEntity extends Equatable {
   final int? age;
   final double? weight;
   final double? height;
+  final double? diabetesRiskScore;
+  final double? hypertensionRiskScore;
+  final double? heartRiskScore;
 
   const UserEntity({
     required this.id,
@@ -19,6 +22,9 @@ class UserEntity extends Equatable {
     this.age,
     this.weight,
     this.height,
+    this.diabetesRiskScore,
+    this.hypertensionRiskScore,
+    this.heartRiskScore,
   });
 
   @override
@@ -31,5 +37,8 @@ class UserEntity extends Equatable {
     age,
     height,
     weight,
+    diabetesRiskScore,
+    hypertensionRiskScore,
+    heartRiskScore,
   ];
 }
