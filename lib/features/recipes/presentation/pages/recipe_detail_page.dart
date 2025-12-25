@@ -112,7 +112,7 @@ class RecipeDetailPage extends StatelessWidget {
                           border: isHighContrast ? Border.all(color: Colors.white24) : null,
                         ),
                         child: Wrap(
-                          spacing: 20,
+                          spacing: 48,
                           runSpacing: 16,
                           alignment: WrapAlignment.spaceAround,
                           children: [
