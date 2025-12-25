@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../config/routes/route_names.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -26,7 +27,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _onLoginPressed() {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) return;
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty)
+      return;
 
     context.read<AuthBloc>().add(
       AuthLoginRequested(
@@ -39,14 +41,17 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB), // bg-gray-50
+      backgroundColor: const Color(0xFFF9FAFB),
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is Authenticated) {
             context.goNamed(RouteNames.home);
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
             );
           }
         },
@@ -59,23 +64,25 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Back Button
                   IconButton(
                     onPressed: () => context.goNamed(RouteNames.welcome),
-                    icon: const Icon(Icons.chevron_left, size: 32, color: Color(0xFF4B5563)),
+                    icon: const Icon(
+                      Icons.chevron_left,
+                      size: 32,
+                      color: Color(0xFF4B5563),
+                    ),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
 
                   const SizedBox(height: 32),
 
-                  // Title
                   const Text(
                     "Welcome Back",
                     style: TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937), // gray-800
+                      color: Color(0xFF1F2937),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -86,7 +93,6 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 40),
 
-                  // Inputs
                   AuthField(
                     controller: _emailController,
                     hintText: "Email",
@@ -101,32 +107,33 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 24),
 
-                  // Login Button
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
                       onPressed: isLoading ? null : _onLoginPressed,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB), // bg-blue-600
+                        backgroundColor: const Color(0xFF2563EB),
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16), // rounded-2xl
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
                       child: isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
-                        "Login",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
+                              "Login",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
 
                   const SizedBox(height: 24),
 
-                  // Register Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

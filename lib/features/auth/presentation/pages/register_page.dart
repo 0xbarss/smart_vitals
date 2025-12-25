@@ -34,7 +34,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Trigger Firebase Registration
     context.read<AuthBloc>().add(
       AuthRegisterRequested(
         email: _emailController.text.trim(),
@@ -47,11 +46,10 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB), // bg-gray-50
+      backgroundColor: const Color(0xFFF9FAFB),
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is Authenticated) {
-            // SUCCESS: Navigate to Step 2 (Health Details)
             context.goNamed(RouteNames.healthDetails);
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -64,11 +62,10 @@ class _RegisterPageState extends State<RegisterPage> {
 
           return SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(24.0), // p-6
+              padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Back Chevron
                   GestureDetector(
                     onTap: () => context.goNamed(RouteNames.welcome),
                     child: const Icon(Icons.chevron_left, size: 32, color: Color(0xFF4B5563)),
@@ -76,11 +73,10 @@ class _RegisterPageState extends State<RegisterPage> {
 
                   const SizedBox(height: 16),
 
-                  // Title
                   const Text(
                     "Create Account",
                     style: TextStyle(
-                      fontSize: 30, // text-3xl
+                      fontSize: 30,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF1F2937),
                     ),
@@ -88,7 +84,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
                   const SizedBox(height: 32),
 
-                  // Inputs
                   AuthField(
                     controller: _nameController,
                     hintText: "Full Name",
@@ -108,14 +103,13 @@ class _RegisterPageState extends State<RegisterPage> {
 
                   const SizedBox(height: 16),
 
-                  // Continue Button
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
                       onPressed: isLoading ? null : _onContinuePressed,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB), // bg-blue-600
+                        backgroundColor: const Color(0xFF2563EB),
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(

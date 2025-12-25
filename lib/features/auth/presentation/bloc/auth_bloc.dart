@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
-
 import 'auth_event.dart';
 import 'auth_state.dart';
 
@@ -77,6 +76,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             event.email,
             event.emergencyEmail,
             event.emergencyPhone,
+            event.age,
+            event.weight,
+            event.height,
         );
 
         await FirebaseAuth.instance.currentUser?.reload();
@@ -87,6 +89,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           name: event.name,
           emergencyEmail: event.emergencyEmail,
           emergencyPhone: event.emergencyPhone,
+          age: event.age,
+          weight: event.weight,
+          height: event.height,
         );
 
         emit(Authenticated(updatedUser));

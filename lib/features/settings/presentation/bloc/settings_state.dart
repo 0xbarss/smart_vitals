@@ -7,6 +7,9 @@ class SettingsState {
   final AppMode appMode;
   final Map<String, bool> dietary;
   final Map<String, bool> allergies;
+  final int age;
+  final double weight;
+  final double height;
 
   const SettingsState({
     this.highContrast = false,
@@ -27,6 +30,9 @@ class SettingsState {
       'shellfish': false,
       'eggs': false,
     },
+    this.age = 25,
+    this.weight = 70.0,
+    this.height = 175.0,
   });
 
   SettingsState copyWith({
@@ -36,6 +42,9 @@ class SettingsState {
     AppMode? appMode,
     Map<String, bool>? dietary,
     Map<String, bool>? allergies,
+    int? age,
+    double? weight,
+    double? height,
   }) {
     return SettingsState(
       highContrast: highContrast ?? this.highContrast,
@@ -44,6 +53,9 @@ class SettingsState {
       appMode: appMode ?? this.appMode,
       dietary: dietary ?? this.dietary,
       allergies: allergies ?? this.allergies,
+      age: age ?? this.age,
+      weight: weight ?? this.weight,
+      height: height ?? this.height,
     );
   }
 }

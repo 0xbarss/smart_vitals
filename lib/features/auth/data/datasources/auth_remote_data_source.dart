@@ -10,7 +10,16 @@ abstract class AuthRemoteDataSource {
 
   Future<void> register(String email, String password, String name);
 
-  Future<void> updateUserData(String uid, String name, String email, String emergencyEmail, String emergencyPhone);
+  Future<void> updateUserData(
+    String uid,
+    String name,
+    String email,
+    String emergencyEmail,
+    String emergencyPhone,
+    int age,
+    double weight,
+    double height,
+  );
 
   Future<void> logout();
 }
@@ -35,7 +44,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         return UserModel.fromMap(doc.data()!);
       }
 
-      return UserModel(id: user.uid, email: user.email ?? '', name: user.displayName);
+      return UserModel(
+        id: user.uid,
+        email: user.email ?? '',
+        name: user.displayName,
+      );
     });
   }
 
@@ -82,7 +95,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<void> updateUserData(String uid, String name, String email, String emergencyEmail, String emergencyPhone) async {
+  Future<void> updateUserData(
+    String uid,
+    String name,
+    String email,
+    String emergencyEmail,
+    String emergencyPhone,
+    int age,
+    double weight,
+    double height,
+  ) async {
     final user = _firebaseAuth.currentUser;
     if (user != null) {
       await user.updateDisplayName(name);
@@ -92,6 +114,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       'email': email,
       'emergencyEmail': emergencyEmail,
       'emergencyPhone': emergencyPhone,
+      'age': age,
+      'weight': weight,
+      'height': height,
     });
   }
 
