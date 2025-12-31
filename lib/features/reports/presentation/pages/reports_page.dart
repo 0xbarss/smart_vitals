@@ -39,8 +39,8 @@ class _ReportsPageState extends State<ReportsPage> {
     FlSpot(6, 70),
   ];
 
-  final TextEditingController _systolicController = TextEditingController();
-  final TextEditingController _diastolicController = TextEditingController();
+  final TextEditingController _sodiumController = TextEditingController();
+  final TextEditingController _ldlController = TextEditingController();
   final TextEditingController _glucoseController = TextEditingController();
 
   String _sanitizeForPdf(String text) {
@@ -497,19 +497,19 @@ class _ReportsPageState extends State<ReportsPage> {
                     ),
                     const SizedBox(height: 16),
                     TextField(
-                      controller: _systolicController,
+                      controller: _sodiumController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: "Systolic BP (mmHg)",
+                        labelText: "Sodyum (mmol/L)",
                         border: OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
-                      controller: _diastolicController,
+                      controller: _ldlController,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
-                        labelText: "Diastolic BP (mmHg)",
+                        labelText: "Bad Cholesterol - LDL (mg/dL)",
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -533,19 +533,19 @@ class _ReportsPageState extends State<ReportsPage> {
                 ElevatedButton(
                   onPressed: () {
                     final data = {
-                      if (_systolicController.text.isNotEmpty)
-                        'systolic_bp': _systolicController.text,
-                      if (_diastolicController.text.isNotEmpty)
-                        'diastolic_bp': _diastolicController.text,
+                      if (_sodiumController.text.isNotEmpty)
+                        'Sodyum': {'result': _sodiumController.text},
+                      if (_ldlController.text.isNotEmpty)
+                        'LDL': {'result': _ldlController.text},
                       if (_glucoseController.text.isNotEmpty)
-                        'blood_glucose': _glucoseController.text,
+                        'Glukoz': {'result': _glucoseController.text},
                     };
 
                     if (data.isNotEmpty) {
                       Navigator.pop(context);
                       _saveToFirestore(selectedDate, data, 'manual');
-                      _systolicController.clear();
-                      _diastolicController.clear();
+                      _sodiumController.clear();
+                      _ldlController.clear();
                       _glucoseController.clear();
                     }
                   },
